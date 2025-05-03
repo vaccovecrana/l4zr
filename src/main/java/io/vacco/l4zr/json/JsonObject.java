@@ -732,6 +732,25 @@ public class JsonObject extends JsonValue implements Iterable<Member> {
   }
 
   @Override
+  void write(JsonWriter writer) throws IOException {
+    writer.writeObjectOpen();
+    Iterator<String> namesIterator = names.iterator();
+    Iterator<JsonValue> valuesIterator = values.iterator();
+    if (namesIterator.hasNext()) {
+      writer.writeMemberName(namesIterator.next());
+      writer.writeMemberSeparator();
+      valuesIterator.next().write(writer);
+      while (namesIterator.hasNext()) {
+        writer.writeObjectSeparator();
+        writer.writeMemberName(namesIterator.next());
+        writer.writeMemberSeparator();
+        valuesIterator.next().write(writer);
+      }
+    }
+    writer.writeObjectClose();
+  }
+
+  @Override
   public boolean isObject() {
     return true;
   }

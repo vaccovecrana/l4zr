@@ -21,6 +21,8 @@
  ******************************************************************************/
 package io.vacco.l4zr.json;
 
+import java.io.IOException;
+
 
 @SuppressWarnings("serial") // use default serial UID
 class JsonNumber extends JsonValue {
@@ -37,6 +39,11 @@ class JsonNumber extends JsonValue {
   @Override
   public String toString() {
     return string;
+  }
+
+  @Override
+  void write(JsonWriter writer) throws IOException {
+    writer.writeNumber(string);
   }
 
   @Override

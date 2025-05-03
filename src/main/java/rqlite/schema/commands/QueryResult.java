@@ -1,4 +1,4 @@
-package rqlite.schema;
+package rqlite.schema.commands;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

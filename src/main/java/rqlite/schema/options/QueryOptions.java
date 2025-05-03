@@ -1,10 +1,8 @@
-package rqlite.schema;
+package rqlite.schema.options;
 
 import java.time.Duration;
 
-public class RequestOptions {
-  @UValue(value = "transaction", omitEmpty = true)
-  public boolean transaction;
+public class QueryOptions {
   @UValue(value = "timeout", omitEmpty = true)
   public Duration timeout;
   @UValue(value = "pretty", omitEmpty = true)
@@ -18,9 +16,9 @@ public class RequestOptions {
   @UValue(value = "level", omitEmpty = true)
   public ReadConsistencyLevel level;
   @UValue(value = "linearizable_timeout", omitEmpty = true)
-  public String linearizableTimeout;
+  public Duration linearizableTimeout;
   @UValue(value = "freshness", omitEmpty = true)
-  public String freshness;
+  public Duration freshness;
   @UValue(value = "freshness_strict", omitEmpty = true)
   public boolean freshnessStrict;
 }

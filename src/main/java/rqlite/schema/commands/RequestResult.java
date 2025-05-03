@@ -1,15 +1,16 @@
-package rqlite.schema;
+package rqlite.schema.commands;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
-import java.util.Map;
 
-class RequestResultAssoc {
+class RequestResult {
+  @JsonProperty("columns")
+  public List<String> columns;
   @JsonProperty("types")
-  public Map<String, String> types;
-  @JsonProperty("rows")
-  public List<Map<String, Object>> rows;
+  public List<String> types;
+  @JsonProperty("values")
+  public List<List<Object>> values;
   @JsonProperty("last_insert_id")
   public Long lastInsertID;
   @JsonProperty("rows_affected")

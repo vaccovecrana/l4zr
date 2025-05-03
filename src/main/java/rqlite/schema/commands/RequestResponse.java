@@ -1,12 +1,12 @@
-package rqlite.schema;
+package rqlite.schema.commands;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-public class QueryResponse {
+public class RequestResponse {
   @JsonProperty("results")
-  public Object results; // may be List<QueryResult> or List<QueryResultAssoc>
+  public Object results; // may be List<RequestResult> or List<RequestResultAssoc>
   @JsonProperty("time")
   public double time;
 
@@ -15,17 +15,17 @@ public class QueryResponse {
       List<?> list = (List<?>) results;
       if (!list.isEmpty()) {
         Object first = list.get(0);
-        if (first instanceof QueryResult) {
+        if (first instanceof RequestResult) {
           for (Object o : list) {
-            QueryResult qr = (QueryResult) o;
-            if (qr.error != null && !qr.error.isEmpty()) {
+            RequestResult rr = (RequestResult) o;
+            if (rr.error != null && !rr.error.isEmpty()) {
               return true;
             }
           }
-        } else if (first instanceof QueryResultAssoc) {
+        } else if (first instanceof RequestResultAssoc) {
           for (Object o : list) {
-            QueryResultAssoc qra = (QueryResultAssoc) o;
-            if (qra.error != null && !qra.error.isEmpty()) {
+            RequestResultAssoc rra = (RequestResultAssoc) o;
+            if (rra.error != null && !rra.error.isEmpty()) {
               return true;
             }
           }

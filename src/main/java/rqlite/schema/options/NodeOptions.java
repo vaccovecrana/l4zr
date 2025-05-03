@@ -1,4 +1,4 @@
-package rqlite.schema;
+package rqlite.schema.options;
 
 import java.time.Duration;
 

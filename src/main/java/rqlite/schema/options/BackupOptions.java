@@ -1,4 +1,4 @@
-package rqlite.schema;
+package rqlite.schema.options;
 
 /* Options classes. Their fields are annotated so that URLUtils.makeQueryString
    will convert them into URL query parameters. */

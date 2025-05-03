@@ -1,4 +1,4 @@
-package rqlite;
+package rqlite.util;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -13,7 +13,7 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 
 /* A set of helper methods to create HttpClient instances with various TLS settings. */
-class HttpClients {
+public class HttpClients {
 
   public static HttpClient defaultHttpClient() {
     return HttpClient.newBuilder()

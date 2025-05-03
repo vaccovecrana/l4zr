@@ -11,11 +11,16 @@ import java.io.*;
 
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import rqlite.schema.*;
+import rqlite.schema.commands.ExecuteResponse;
+import rqlite.schema.commands.QueryResponse;
+import rqlite.schema.commands.RequestResponse;
+import rqlite.schema.options.*;
 import rqlite.sql.SQLStatement;
 import rqlite.sql.SQLStatementDeserializer;
 import rqlite.sql.SQLStatementSerializer;
 import rqlite.sql.SQLStatements;
+import rqlite.util.HttpClients;
+import rqlite.util.URLUtils;
 
 /* The main rqlite client. Methods map closely to your Go client.
    For brevity, each method throws Exception on error. */

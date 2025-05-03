@@ -1,7 +1,7 @@
-package rqlite;
+package rqlite.util;
 
-import rqlite.schema.ReadConsistencyLevel;
-import rqlite.schema.UValue;
+import rqlite.schema.options.ReadConsistencyLevel;
+import rqlite.schema.options.UValue;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -9,7 +9,7 @@ import java.net.URLEncoder;
 import java.time.Duration;
 
 /* Utility to build a query string from an options object using reflection. */
-class URLUtils {
+public class URLUtils {
   public static String makeQueryString(Object options) throws Exception {
     if (options == null) {
       return "";

@@ -138,29 +138,6 @@ public class RqliteClient {
     return rr;
   }
 
-  public InputStream backup(BackupOptions opts) throws Exception {
-    String queryParams = (opts != null) ? URLUtils.makeQueryString(opts) : "";
-    HttpResponse<InputStream> resp = doGetRequestStream(backupURL + queryParams);
-    if (resp.statusCode() != 200) {
-      throw new IOException("Unexpected status code: " + resp.statusCode());
-    }
-    return resp.body();
-  }
-
-  public void load(InputStream in, LoadOptions opts) throws Exception {
-    String queryParams = (opts != null) ? URLUtils.makeQueryString(opts) : "";
-    byte[] first13 = new byte[13];
-    if (in.read(first13) != 13) {
-      throw new IOException("Unable to read first 13 bytes");
-    }
-    InputStream combined = new SequenceInputStream(new ByteArrayInputStream(first13), in);
-    if (validSQLiteData(first13)) {
-      doOctetStreamPostRequest(loadURL + queryParams, combined);
-    } else {
-      doPlainPostRequest(loadURL + queryParams, combined);
-    }
-  }
-
   public void boot(InputStream in) throws Exception {
     doOctetStreamPostRequest(bootURL, in);
   }
@@ -205,11 +182,6 @@ public class RqliteClient {
   private HttpResponse<byte[]> doOctetStreamPostRequest(String url, InputStream bodyStream) throws Exception {
     byte[] body = bodyStream.readAllBytes();
     return doRequest("POST", url, "application/octet-stream", body);
-  }
-
-  private HttpResponse<byte[]> doPlainPostRequest(String url, InputStream bodyStream) throws Exception {
-    byte[] body = bodyStream.readAllBytes();
-    return doRequest("POST", url, "text/plain", body);
   }
 
   private HttpResponse<byte[]> doRequest(String method, String url, String contentType, byte[] body) throws Exception {
@@ -266,10 +238,5 @@ public class RqliteClient {
     }
   }
 
-  private boolean validSQLiteData(byte[] b) {
-    if (b.length < 13) return false;
-    String header = new String(b, 0, 13);
-    return header.equals("SQLite format");
-  }
 }
 

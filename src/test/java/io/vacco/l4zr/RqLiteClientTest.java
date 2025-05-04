@@ -6,6 +6,7 @@ import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
 import io.vacco.l4zr.rqlite.RqliteClient;
 import io.vacco.l4zr.rqlite.HttpClients;
+import java.awt.GraphicsEnvironment;
 
 import static java.lang.String.join;
 import static j8spec.J8Spec.*;
@@ -14,39 +15,41 @@ import static j8spec.J8Spec.*;
 @RunWith(J8SpecRunner.class)
 public class RqLiteClientTest {
   static {
-    it("Interacts with an Rqlite instance", () -> {
-      var rq = new RqliteClient("http://localhost:4001", HttpClients.defaultHttpClient());
-      var status = rq.status();
-      var nodes = rq.nodes();
-      var ready = rq.ready();
+    if (!GraphicsEnvironment.isHeadless()) {
+      it("Interacts with an Rqlite instance", () -> {
+        var rq = new RqliteClient("http://localhost:4001", HttpClients.defaultHttpClient());
+        var status = rq.status();
+        var nodes = rq.nodes();
+        var ready = rq.ready();
 
-      var res0 = rq.executeSingle(join("\n", "",
-        "CREATE TABLE IF NOT EXISTS users (",
-        "  id INTEGER PRIMARY KEY AUTOINCREMENT,",
-        "  name TEXT NOT NULL,",
-        "  email TEXT NOT NULL UNIQUE,",
-        "  age INTEGER",
-        ")"
-      ));
+        var res0 = rq.executeSingle(join("\n", "",
+          "CREATE TABLE IF NOT EXISTS users (",
+          "  id INTEGER PRIMARY KEY AUTOINCREMENT,",
+          "  name TEXT NOT NULL,",
+          "  email TEXT NOT NULL UNIQUE,",
+          "  age INTEGER",
+          ")"
+        ));
 
-      var res1 = rq.querySingle("SELECT * FROM users");
-      System.out.println(res1);
+        var res1 = rq.querySingle("SELECT * FROM users");
+        System.out.println(res1);
 
-      if (res1.results != null) {
-        var rl = res1.results;
-        var vals = rl.get(0).values;
-        if (vals == null || vals.isEmpty()) {
-          var res2 = rq.execute(
-            new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Alice', 'alice@example.com', 30)"),
-            new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Bob', 'bob@example.com', 25)"),
-            new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Charlie', 'charlie@example.com', 35)")
-          );
-          System.out.println(res2);
+        if (res1.results != null) {
+          var rl = res1.results;
+          var vals = rl.get(0).values;
+          if (vals == null || vals.isEmpty()) {
+            var res2 = rq.execute(
+              new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Alice', 'alice@example.com', 30)"),
+              new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Bob', 'bob@example.com', 25)"),
+              new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Charlie', 'charlie@example.com', 35)")
+            );
+            System.out.println(res2);
+          }
         }
-      }
 
-      var res3 = rq.querySingle("SELECT * FROM users WHERE age > ?", 30);
-      System.out.println(res3);
-    });
+        var res3 = rq.querySingle("SELECT * FROM users WHERE age > ?", 30);
+        System.out.println(res3);
+      });
+    }
   }
 }

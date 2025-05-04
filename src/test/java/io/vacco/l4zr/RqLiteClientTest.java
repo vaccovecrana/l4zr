@@ -4,8 +4,8 @@ import io.vacco.l4zr.jdbc.L4Statement;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
-import rqlite.RqliteClient;
-import rqlite.util.HttpClients;
+import io.vacco.l4zr.rqlite.RqliteClient;
+import io.vacco.l4zr.rqlite.HttpClients;
 
 import static java.lang.String.join;
 import static j8spec.J8Spec.*;

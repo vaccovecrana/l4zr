@@ -1,4 +1,4 @@
-package rqlite.util;
+package io.vacco.l4zr.rqlite;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;

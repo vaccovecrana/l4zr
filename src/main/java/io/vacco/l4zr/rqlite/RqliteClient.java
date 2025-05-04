@@ -1,4 +1,4 @@
-package rqlite;
+package io.vacco.l4zr.rqlite;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -13,7 +13,6 @@ import io.vacco.l4zr.jdbc.L4Response;
 import io.vacco.l4zr.jdbc.L4Statement;
 import io.vacco.l4zr.json.Json;
 import io.vacco.l4zr.json.JsonValue;
-import rqlite.util.HttpClients;
 
 public class RqliteClient {
 

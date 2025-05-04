@@ -4,8 +4,7 @@ import io.vacco.l4zr.rqlite.L4Statement;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
-import io.vacco.l4zr.rqlite.RqliteClient;
-import io.vacco.l4zr.rqlite.HttpClients;
+import io.vacco.l4zr.rqlite.*;
 import java.awt.GraphicsEnvironment;
 
 import static java.lang.String.join;
@@ -13,11 +12,11 @@ import static j8spec.J8Spec.*;
 
 @DefinedOrder
 @RunWith(J8SpecRunner.class)
-public class RqLiteClientTest {
+public class L4ClientTest {
   static {
     if (!GraphicsEnvironment.isHeadless()) {
       it("Interacts with an Rqlite instance", () -> {
-        var rq = new RqliteClient("http://localhost:4001", HttpClients.defaultHttpClient());
+        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var status = rq.status();
         var nodes = rq.nodes();
         var ready = rq.ready();

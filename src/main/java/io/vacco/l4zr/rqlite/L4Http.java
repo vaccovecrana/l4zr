@@ -1,19 +1,14 @@
 package io.vacco.l4zr.rqlite;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.*;
 import java.io.ByteArrayInputStream;
 import java.net.http.HttpClient;
-import java.security.KeyStore;
-import java.security.SecureRandom;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
+import java.security.*;
+import java.security.cert.*;
 import java.time.Duration;
 
 /* A set of helper methods to create HttpClient instances with various TLS settings. */
-public class HttpClients {
+public class L4Http {
 
   public static HttpClient defaultHttpClient() {
     return HttpClient.newBuilder()

@@ -7,7 +7,7 @@ import java.util.*;
 import java.io.*;
 import io.vacco.l4zr.json.*;
 
-public class RqliteClient {
+public class L4Client {
 
   private HttpClient httpClient;
   private String executeURL;
@@ -19,13 +19,13 @@ public class RqliteClient {
   private String basicAuthUser = "";
   private String basicAuthPass = "";
 
-  public RqliteClient(String baseURL, HttpClient client) {
+  public L4Client(String baseURL, HttpClient client) {
     this.executeURL = baseURL + "/db/execute";
     this.queryURL = baseURL + "/db/query";
     this.statusURL = baseURL + "/status";
     this.nodesURL = baseURL + "/nodes";
     this.readyURL = baseURL + "/readyz";
-    this.httpClient = (client != null) ? client : HttpClients.defaultHttpClient();
+    this.httpClient = (client != null) ? client : L4Http.defaultHttpClient();
   }
 
   public void setBasicAuth(String username, String password) {

@@ -8,47 +8,32 @@ import java.time.Duration;
 import java.util.*;
 import java.io.*;
 
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.vacco.l4zr.jdbc.L4Options;
 import io.vacco.l4zr.jdbc.L4Response;
+import io.vacco.l4zr.jdbc.L4Statement;
 import io.vacco.l4zr.json.Json;
-import rqlite.sql.SQLStatement;
-import rqlite.sql.SQLStatementDeserializer;
-import rqlite.sql.SQLStatementSerializer;
-import rqlite.sql.SQLStatements;
+import io.vacco.l4zr.json.JsonValue;
 import rqlite.util.HttpClients;
 
-/* The main rqlite client. Methods map closely to your Go client.
-   For brevity, each method throws Exception on error. */
 public class RqliteClient {
 
   private HttpClient httpClient;
   private String executeURL;
   private String queryURL;
-  private String requestURL;
   private String statusURL;
   private String nodesURL;
   private String readyURL;
 
   private String basicAuthUser = "";
   private String basicAuthPass = "";
-  private final ObjectMapper objectMapper;
 
   public RqliteClient(String baseURL, HttpClient client) {
     this.executeURL = baseURL + "/db/execute";
     this.queryURL = baseURL + "/db/query";
-    this.requestURL = baseURL + "/db/request";
     this.statusURL = baseURL + "/status";
     this.nodesURL = baseURL + "/nodes";
     this.readyURL = baseURL + "/readyz";
     this.httpClient = (client != null) ? client : HttpClients.defaultHttpClient();
-
-    objectMapper = new ObjectMapper();
-    SimpleModule module = new SimpleModule();
-    module.addSerializer(SQLStatement.class, new SQLStatementSerializer());
-    module.addDeserializer(SQLStatement.class, new SQLStatementDeserializer());
-    objectMapper.registerModule(module);
   }
 
   public void setBasicAuth(String username, String password) {
@@ -57,83 +42,66 @@ public class RqliteClient {
   }
 
   public L4Response executeSingle(String statement, Object... args) throws Exception {
-    SQLStatement stmt = SQLStatement.newSQLStatement(statement, args);
-    SQLStatements stmts = new SQLStatements();
-    stmts.add(stmt);
-    return execute(stmts);
+    return execute(new L4Statement().sql(statement).withPositionalParams(args));
   }
 
-  public L4Response execute(SQLStatements statements) throws Exception {
-    byte[] body = objectMapper.writeValueAsBytes(statements);
-    String queryParams = L4Options.queryParams();
+  public L4Response execute(L4Statement ... statements) throws Exception {
+    var body = L4Statement.toArray(statements).toString();
+    var queryParams = L4Options.queryParams();
     var resp = doJSONPostRequest(executeURL + queryParams, body);
     if (resp.statusCode() != 200) {
-      throw new IOException("Unexpected status code: " + resp.statusCode() + ", body: " + new String(resp.body()));
+      throw new IOException("Unexpected status code: " + resp.statusCode() + ", body: " + resp.body());
     }
     var node = Json.parse(resp.body()).asObject();
     return new L4Response(resp.statusCode(), node);
   }
 
   public L4Response querySingle(String statement, Object... args) throws Exception {
-    SQLStatement stmt = SQLStatement.newSQLStatement(statement, args);
-    SQLStatements stmts = new SQLStatements();
-    stmts.add(stmt);
-    return query(stmts);
+    return query(new L4Statement().sql(statement).withPositionalParams(args));
   }
 
-  public L4Response query(SQLStatements statements) throws Exception {
-    byte[] body = objectMapper.writeValueAsBytes(statements);
-    String queryParams = L4Options.queryParams();
+  // TODO error handling: "400 - invalid request"
+  public L4Response query(L4Statement ... statements) throws Exception {
+    var body = L4Statement.toArray(statements).toString();
+    var queryParams = L4Options.queryParams();
     var resp = doJSONPostRequest(queryURL + queryParams, body);
     var node = Json.parse(resp.body()).asObject();
     return new L4Response(resp.statusCode(), node);
   }
 
-  public L4Response requestSingle(String statement, Object... args) throws Exception {
-    SQLStatement stmt = SQLStatement.newSQLStatement(statement, args);
-    SQLStatements stmts = new SQLStatements();
-    stmts.add(stmt);
-    return request(stmts);
-  }
-
-  public L4Response request(SQLStatements statements) throws Exception {
-    byte[] body = objectMapper.writeValueAsBytes(statements);
-    String queryParams = L4Options.queryParams();
-    var resp = doJSONPostRequest(requestURL + queryParams, body);
-    var node = Json.parse(resp.body()).asObject();
-    return new L4Response(resp.statusCode(), node);
-  }
-
-  public JsonNode status() throws Exception {
-    HttpResponse<byte[]> resp = doGetRequestBytes(statusURL);
+  public JsonValue status() throws Exception {
+    var resp = doGetRequest(statusURL);
     if (resp.statusCode() != 200) {
       throw new IOException("Unexpected status code: " + resp.statusCode());
     }
-    return objectMapper.readTree(resp.body());
+    return Json.parse(resp.body());
   }
 
-  public JsonNode nodes() throws Exception {
-    HttpResponse<byte[]> resp = doGetRequestBytes(nodesURL);
+  public JsonValue nodes() throws Exception {
+    var resp = doGetRequest(nodesURL);
     if (resp.statusCode() != 200) {
       throw new IOException("Unexpected status code: " + resp.statusCode());
     }
-    return objectMapper.readTree(resp.body());
+    return Json.parse(resp.body());
   }
 
-  public InputStream ready() throws Exception {
-    HttpResponse<InputStream> resp = doGetRequest(readyURL);
+  public String ready() throws Exception {
+    var resp = doGetRequest(readyURL);
     return resp.body();
   }
 
-  private HttpResponse<String> doJSONPostRequest(String url, byte[] body) throws Exception {
+  private HttpResponse<String> doJSONPostRequest(String url, String body) throws Exception {
     return doPostRequest(url, "application/json", body);
   }
 
-  private HttpResponse<String> doPostRequest(String url, String contentType, byte[] body) throws Exception {
+  private HttpResponse<String> doPostRequest(String url, String contentType, String body) throws Exception {
     HttpRequest.Builder builder = HttpRequest.newBuilder()
       .uri(URI.create(url))
       .timeout(Duration.ofSeconds(5));
-    builder.method("POST", HttpRequest.BodyPublishers.ofByteArray(body));
+
+    System.out.println(body);
+
+    builder.method("POST", HttpRequest.BodyPublishers.ofString(body));
     if (contentType != null && !contentType.isEmpty()) {
       builder.header("Content-Type", contentType);
     }
@@ -142,23 +110,13 @@ public class RqliteClient {
     return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
   }
 
-  private HttpResponse<InputStream> doGetRequest(String url) throws Exception {
+  private HttpResponse<String> doGetRequest(String url) throws Exception {
     HttpRequest.Builder builder = HttpRequest.newBuilder()
       .uri(URI.create(url))
       .GET();
     addBasicAuth(builder);
     HttpRequest req = builder.build();
-    return httpClient.send(req, HttpResponse.BodyHandlers.ofInputStream());
-  }
-
-  // For endpoints where you need the full response as a byte array (for JSON parsing)
-  private HttpResponse<byte[]> doGetRequestBytes(String url) throws Exception {
-    HttpRequest.Builder builder = HttpRequest.newBuilder()
-      .uri(URI.create(url))
-      .GET();
-    addBasicAuth(builder);
-    HttpRequest req = builder.build();
-    return httpClient.send(req, HttpResponse.BodyHandlers.ofByteArray());
+    return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
   }
 
   private void addBasicAuth(HttpRequest.Builder builder) {

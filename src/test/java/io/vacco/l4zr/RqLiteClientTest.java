@@ -1,14 +1,13 @@
 package io.vacco.l4zr;
 
+import io.vacco.l4zr.jdbc.L4Statement;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
 import rqlite.RqliteClient;
-import rqlite.sql.SQLStatements;
 import rqlite.util.HttpClients;
 
 import static java.lang.String.join;
-import static rqlite.sql.SQLStatement.*;
 import static j8spec.J8Spec.*;
 
 @DefinedOrder
@@ -19,6 +18,7 @@ public class RqLiteClientTest {
       var rq = new RqliteClient("http://localhost:4001", HttpClients.defaultHttpClient());
       var status = rq.status();
       var nodes = rq.nodes();
+      var ready = rq.ready();
 
       var res0 = rq.executeSingle(join("\n", "",
         "CREATE TABLE IF NOT EXISTS users (",
@@ -36,11 +36,11 @@ public class RqLiteClientTest {
         var rl = res1.results;
         var vals = rl.get(0).values;
         if (vals == null || vals.isEmpty()) {
-          var statements = new SQLStatements();
-          statements.add(newSQLStatement("INSERT INTO users (name, email, age) VALUES ('Alice', 'alice@example.com', 30)"));
-          statements.add(newSQLStatement("INSERT INTO users (name, email, age) VALUES ('Bob', 'bob@example.com', 25)"));
-          statements.add(newSQLStatement("INSERT INTO users (name, email, age) VALUES ('Charlie', 'charlie@example.com', 35)"));
-          var res2 = rq.execute(statements);
+          var res2 = rq.execute(
+            new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Alice', 'alice@example.com', 30)"),
+            new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Bob', 'bob@example.com', 25)"),
+            new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Charlie', 'charlie@example.com', 35)")
+          );
           System.out.println(res2);
         }
       }

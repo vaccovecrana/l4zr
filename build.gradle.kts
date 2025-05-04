@@ -11,10 +11,6 @@ configure<io.vacco.oss.gitflow.GsPluginProfileExtension> {
 
 val api by configurations
 
-dependencies {
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
-}
-
 tasks.processResources {
   filesMatching("io/vacco/l4zr/version") {
     expand("projectVersion" to version)

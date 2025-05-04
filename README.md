@@ -6,6 +6,16 @@ Right now, result sets returned from `rqlite` HTTP calls will be held in memory,
 (i.e. mapped from raw JSON data to JDBC Result sets). So in general, try to write
 queries that bring back small amounts of data.
 
+```
+Final Implementation Order
+L4Exception: Foundational error handling.
+L4Driver: Entry point for JDBC.
+L4Connection: Manages connections and statements.
+L4Statement: Executes SQL queries.
+L4ResultSet: Processes query results.
+L4ResultSetMetaData: Provides result set metadata.
+```
+
 ## Driver Options and Defaults
 
 Here’s a list of options to expose via the JDBC URL, along with defaults that support clustered environments and align with JDBC expectations:

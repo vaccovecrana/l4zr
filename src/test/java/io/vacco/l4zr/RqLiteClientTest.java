@@ -1,6 +1,6 @@
 package io.vacco.l4zr;
 
-import io.vacco.l4zr.jdbc.L4Statement;
+import io.vacco.l4zr.rqlite.L4Statement;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;

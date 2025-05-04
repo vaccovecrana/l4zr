@@ -5,7 +5,6 @@ import java.net.http.*;
 import java.time.Duration;
 import java.util.*;
 import java.io.*;
-import io.vacco.l4zr.jdbc.*;
 import io.vacco.l4zr.json.*;
 
 public class RqliteClient {

@@ -1,4 +1,4 @@
-package io.vacco.l4zr.jdbc;
+package io.vacco.l4zr.rqlite;
 
 public class L4Options {
 

@@ -1,9 +1,9 @@
-package io.vacco.l4zr.jdbc;
+package io.vacco.l4zr.rqlite;
 
 import io.vacco.l4zr.json.JsonObject;
 import java.util.List;
 
-import static io.vacco.l4zr.jdbc.L4Json.*;
+import static io.vacco.l4zr.rqlite.L4Json.*;
 
 public class L4Result {
 

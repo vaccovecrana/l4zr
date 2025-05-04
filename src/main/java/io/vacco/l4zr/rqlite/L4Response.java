@@ -1,4 +1,4 @@
-package io.vacco.l4zr.jdbc;
+package io.vacco.l4zr.rqlite;
 
 import io.vacco.l4zr.json.JsonObject;
 import java.util.ArrayList;

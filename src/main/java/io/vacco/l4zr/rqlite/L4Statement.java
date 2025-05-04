@@ -41,7 +41,7 @@ public class L4Statement {
       badParams();
     }
     if (this.namedParams == null) {
-      this.namedParams = new java.util.HashMap<>();
+      this.namedParams = new LinkedHashMap<>();
     }
     this.namedParams.put(name, value);
     return this;
@@ -51,7 +51,7 @@ public class L4Statement {
     if (!positionalParams.isEmpty()) {
       badParams();
     }
-    this.namedParams = new java.util.HashMap<>(params);
+    this.namedParams = new LinkedHashMap<>(params);
     return this;
   }
 

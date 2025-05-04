@@ -1,8 +1,7 @@
 package io.vacco.l4zr.jdbc;
 
-import io.vacco.l4zr.json.JsonArray;
-import java.util.ArrayList;
-import java.util.List;
+import io.vacco.l4zr.json.*;
+import java.util.*;
 
 public class L4Json {
 
@@ -29,6 +28,28 @@ public class L4Json {
       values.add(rowValues);
     }
     return values;
+  }
+
+  public static JsonValue toJsonValue(Object value) {
+    if (value == null) {
+      return Json.NULL;
+    } else if (value instanceof String) {
+      return Json.value((String) value);
+    } else if (value instanceof Integer) {
+      return Json.value((Integer) value);
+    } else if (value instanceof Long) {
+      return Json.value((Long) value);
+    } else if (value instanceof Double) {
+      return Json.value((Double) value);
+    } else if (value instanceof Float) {
+      return Json.value((Float) value);
+    } else if (value instanceof Boolean) {
+      return Json.value((Boolean) value);
+    } else if (value instanceof byte[]) {
+      return Json.value(java.util.Base64.getEncoder().encodeToString((byte[]) value));
+    } else {
+      return Json.value(value.toString());
+    }
   }
 
 }

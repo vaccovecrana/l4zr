@@ -13,10 +13,10 @@ import static j8spec.J8Spec.*;
 @RunWith(J8SpecRunner.class)
 public class JsonTest {
   static {
-    it("Parses JSON", () -> {
+    it("Parses/Prints JSON", () -> {
       try (var is = JsonTest.class.getResourceAsStream("/example.json")) {
-        var lol = Json.parse(new InputStreamReader(Objects.requireNonNull(is)));
-        System.out.println("Lol " + lol);
+        var jv = Json.parse(new InputStreamReader(Objects.requireNonNull(is)));
+        System.out.println(jv.toString());
       }
     });
   }

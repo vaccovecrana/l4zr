@@ -1,18 +1,12 @@
 package io.vacco.l4zr.rqlite;
 
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.net.http.*;
 import java.time.Duration;
 import java.util.*;
 import java.io.*;
-
-import io.vacco.l4zr.jdbc.L4Options;
-import io.vacco.l4zr.jdbc.L4Response;
-import io.vacco.l4zr.jdbc.L4Statement;
-import io.vacco.l4zr.json.Json;
-import io.vacco.l4zr.json.JsonValue;
+import io.vacco.l4zr.jdbc.*;
+import io.vacco.l4zr.json.*;
 
 public class RqliteClient {
 
@@ -94,27 +88,24 @@ public class RqliteClient {
   }
 
   private HttpResponse<String> doPostRequest(String url, String contentType, String body) throws Exception {
-    HttpRequest.Builder builder = HttpRequest.newBuilder()
+    var builder = HttpRequest.newBuilder()
       .uri(URI.create(url))
       .timeout(Duration.ofSeconds(5));
-
-    System.out.println(body);
-
     builder.method("POST", HttpRequest.BodyPublishers.ofString(body));
     if (contentType != null && !contentType.isEmpty()) {
       builder.header("Content-Type", contentType);
     }
     addBasicAuth(builder);
-    HttpRequest req = builder.build();
+    var req = builder.build();
     return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
   }
 
   private HttpResponse<String> doGetRequest(String url) throws Exception {
-    HttpRequest.Builder builder = HttpRequest.newBuilder()
+    var builder = HttpRequest.newBuilder()
       .uri(URI.create(url))
       .GET();
     addBasicAuth(builder);
-    HttpRequest req = builder.build();
+    var req = builder.build();
     return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
   }
 

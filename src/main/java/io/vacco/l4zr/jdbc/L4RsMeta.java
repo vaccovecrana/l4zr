@@ -16,7 +16,7 @@ public class L4RsMeta implements ResultSetMetaData {
     this.result = Objects.requireNonNull(result);
   }
 
-  @Override public int getColumnCount() throws SQLException {
+  @Override public int getColumnCount() {
     return result.columns.size();
   }
 

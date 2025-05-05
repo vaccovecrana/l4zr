@@ -9,24 +9,45 @@ import java.sql.*;
 import java.sql.Date;
 import java.util.*;
 
-public class L4ResultSet implements ResultSet {
+public class L4Rs implements ResultSet {
 
   private final L4Result result;
   private final L4RsMeta meta;
+  private final Statement statement;
+  private int currentRow = -1; // Before first row
+  private boolean isClosed = false;
+  private boolean wasNull = false;
+  private final int resultSetType;
+  private final int resultSetConcurrency;
+  private int fetchDirection = ResultSet.FETCH_FORWARD;
+  private int fetchSize = 0;
 
-  public L4ResultSet(L4Result result) {
+  public L4Rs(L4Result result, Statement statement, int resultSetType, int resultSetConcurrency) {
     this.result = Objects.requireNonNull(result);
     this.meta = new L4RsMeta(result);
+    this.statement = statement;
+    this.resultSetType = resultSetType;
+    this.resultSetConcurrency = resultSetConcurrency;
   }
 
-  @Override
-  public boolean next() throws SQLException {
+  private void checkClosed() throws SQLException {
+    if (isClosed) {
+      throw new SQLException("ResultSet is closed", L4Jdbc.SqlStateClosed);
+    }
+  }
+
+  @Override public boolean next() throws SQLException {
+    checkClosed();
+    if (currentRow + 1 < result.values.size()) {
+      currentRow++;
+      return true;
+    }
+    currentRow = result.values.size(); // After last row
     return false;
   }
 
-  @Override
-  public void close() throws SQLException {
-
+  @Override public void close() {
+    isClosed = true;
   }
 
   @Override
@@ -209,9 +230,9 @@ public class L4ResultSet implements ResultSet {
     return "";
   }
 
-  @Override
-  public ResultSetMetaData getMetaData() throws SQLException {
-    return null;
+  @Override public ResultSetMetaData getMetaData() throws SQLException {
+    checkClosed();
+    return meta;
   }
 
   @Override
@@ -579,9 +600,9 @@ public class L4ResultSet implements ResultSet {
 
   }
 
-  @Override
-  public Statement getStatement() throws SQLException {
-    return null;
+  @Override public Statement getStatement() throws SQLException {
+    checkClosed();
+    return statement;
   }
 
   @Override
@@ -739,9 +760,8 @@ public class L4ResultSet implements ResultSet {
     return 0;
   }
 
-  @Override
-  public boolean isClosed() throws SQLException {
-    return false;
+  @Override public boolean isClosed() {
+    return isClosed;
   }
 
   @Override

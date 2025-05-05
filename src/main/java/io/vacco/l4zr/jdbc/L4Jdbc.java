@@ -6,9 +6,10 @@ import java.io.*;
 import java.math.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.sql.Date;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.util.Base64;
+import java.util.*;
 
 import static java.sql.Types.*;
 import static java.lang.String.format;
@@ -20,6 +21,7 @@ public class L4Jdbc {
   public static final int BINARY_STREAM = Types.BLOB + 1000;     // Custom type for binary stream
   public static final int CHARACTER_STREAM = Types.VARCHAR + 1002;
   public static final int CLOB_STREAM = Types.VARCHAR + 1003;
+  public static final int OBJECT_STREAM = Types.OTHER + 1000;
 
   public static final String
     RqInteger = "INTEGER", RqNumeric = "NUMERIC",
@@ -103,6 +105,14 @@ public class L4Jdbc {
       return Long.parseLong(value);
     }
     castError(value, columnIndex, sourceJdbcType, BIGINT);
+    return -1;
+  }
+
+  public static double castFloat(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == REAL) {
+      return Float.parseFloat(value);
+    }
+    castError(value, columnIndex, sourceJdbcType, FLOAT);
     return -1;
   }
 
@@ -220,46 +230,93 @@ public class L4Jdbc {
     return null;
   }
 
-  public static Date castDate(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+  public static Date castDate(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
     if (sourceJdbcType == VARCHAR) {
       var localDate = LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE);
-      return Date.valueOf(localDate);
+      var calendar = cal != null ? cal : Calendar.getInstance();
+      var ldt = localDate.atStartOfDay();
+      var zdt = ldt.atZone(calendar.getTimeZone().toZoneId());
+      return new Date(zdt.toInstant().toEpochMilli());
     } else if (sourceJdbcType == INTEGER) {
       var seconds = Long.parseLong(value);
-      return new Date(seconds * 1000L);
+      return new Date(seconds * 1000L); // Unix timestamp is UTC, no cal adjustment needed
     }
     castError(value, columnIndex, sourceJdbcType, DATE);
     return null;
   }
 
-  public static Time castTime(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+  public static Time castTime(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
     if (sourceJdbcType == VARCHAR) {
       var localTime = LocalTime.parse(value, DateTimeFormatter.ISO_LOCAL_TIME);
-      return Time.valueOf(localTime);
+      var calendar = cal != null ? cal : Calendar.getInstance();
+      var ldt = localTime.atDate(LocalDate.ofEpochDay(0)); // Epoch day for Time
+      var zdt = ldt.atZone(calendar.getTimeZone().toZoneId());
+      return new Time(zdt.toInstant().toEpochMilli());
     } else if (sourceJdbcType == INTEGER) {
       var seconds = Long.parseLong(value);
-      return new Time(seconds * 1000L);
+      return new Time(seconds * 1000L); // Unix timestamp is UTC, no cal adjustment needed
     }
     castError(value, columnIndex, sourceJdbcType, TIME);
     return null;
   }
 
-  public static Timestamp castTimestamp(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+  public static Timestamp castTimestamp(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
     if (sourceJdbcType == VARCHAR) {
       var localDateTime = LocalDateTime.parse(value, DateTimeFormatter.ofPattern("yyyy-MM-dd[[' ']['T']HH:mm:ss][.SSSSSSSSS][.SSSSSS][.SSS]"));
-      return Timestamp.valueOf(localDateTime);
+      var calendar = cal != null ? cal : Calendar.getInstance();
+      var zdt = localDateTime.atZone(calendar.getTimeZone().toZoneId());
+      return new Timestamp(zdt.toInstant().toEpochMilli());
     } else if (sourceJdbcType == INTEGER) {
       var seconds = Long.parseLong(value);
-      return new Timestamp(seconds * 1000L);
+      return new Timestamp(seconds * 1000L); // Unix timestamp is UTC, no cal adjustment needed
     } else if (sourceJdbcType == DOUBLE) {
-      double millis = Double.parseDouble(value) * 1000.0;
-      return new Timestamp((long) millis);
+      var millis = Double.parseDouble(value) * 1000.0;
+      return new Timestamp((long) millis); // Fractional seconds, UTC, no cal adjustment
     }
     castError(value, columnIndex, sourceJdbcType, TIMESTAMP);
     return null;
   }
 
-  public static Object convertValue(String value, int sourceJdbcType, int targetJdbcType, int columnIndex, int scale) throws SQLException {
+  public static <T> T castObject(String value, int columnIndex, int sourceJdbcType, Class<T> type) throws SQLException {
+    if (type == null) {
+      throw new SQLException("Target type cannot be null for column " + columnIndex, SqlStateInvalidType);
+    }
+    Object result;
+    if (type == String.class && (sourceJdbcType == VARCHAR || sourceJdbcType == CHAR)) {
+      result = value;
+    } else if (type == Integer.class && sourceJdbcType == INTEGER) {
+      result = castInteger(value, columnIndex, sourceJdbcType);
+    } else if (type == Long.class && sourceJdbcType == INTEGER) {
+      result = castLong(value, columnIndex, sourceJdbcType);
+    } else if (type == Float.class && sourceJdbcType == REAL) {
+      result = castFloat(value, columnIndex, sourceJdbcType);
+    } else if (type == Double.class && sourceJdbcType == REAL) {
+      result = castDouble(value, columnIndex, sourceJdbcType);
+    } else if (type == Byte.class && sourceJdbcType == INTEGER) {
+      result = castByte(value, columnIndex, sourceJdbcType);
+    } else if (type == Short.class && sourceJdbcType == INTEGER) {
+      result = castShort(value, columnIndex, sourceJdbcType);
+    } else if (type == BigDecimal.class && (sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE || sourceJdbcType == VARCHAR)) {
+      result = castBigDecimal(value, columnIndex, sourceJdbcType, 0);
+    } else if (type == byte[].class && sourceJdbcType == BLOB) {
+      result = castBlob(value, columnIndex, sourceJdbcType);
+    } else if (type == Date.class && (sourceJdbcType == VARCHAR || sourceJdbcType == INTEGER)) {
+      result = castDate(value, columnIndex, sourceJdbcType, null);
+    } else if (type == Time.class && (sourceJdbcType == VARCHAR || sourceJdbcType == INTEGER)) {
+      result = castTime(value, columnIndex, sourceJdbcType, null);
+    } else if (type == Timestamp.class && (sourceJdbcType == VARCHAR || sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE)) {
+      result = castTimestamp(value, columnIndex, sourceJdbcType, null);
+    } else {
+      throw new SQLException(
+        format("Cannot convert column %d (type %d) to %s", columnIndex, sourceJdbcType, type.getName()),
+        SqlStateFeatureNotSupported
+      );
+    }
+    return type.cast(result);
+  }
+
+  public static Object convertValue(String value, int sourceJdbcType, int targetJdbcType,
+                                    int columnIndex, int scale, Calendar cal, Class<?> type) throws SQLException {
     try {
       switch (targetJdbcType) {
         case VARCHAR:
@@ -267,20 +324,22 @@ public class L4Jdbc {
         case BOOLEAN:           return castBoolean(value, columnIndex, sourceJdbcType);
         case INTEGER:           return castInteger(value, columnIndex, sourceJdbcType);
         case BIGINT:            return castLong(value, columnIndex, sourceJdbcType);
-        case DOUBLE:
-        case FLOAT:             return castDouble(value, columnIndex, sourceJdbcType);
+        case DOUBLE:            return castDouble(value, columnIndex, sourceJdbcType);
+        case FLOAT:             return castFloat(value, columnIndex, sourceJdbcType);
         case BLOB:              return castBlob(value, columnIndex, sourceJdbcType);
         case TINYINT:           return castByte(value, columnIndex, sourceJdbcType);
         case SMALLINT:          return castShort(value, columnIndex, sourceJdbcType);
         case DECIMAL:           return castBigDecimal(value, columnIndex, sourceJdbcType, scale);
-        case DATE:              return castDate(value, columnIndex, sourceJdbcType);
-        case TIME:              return castTime(value, columnIndex, sourceJdbcType);
-        case TIMESTAMP:         return castTimestamp(value, columnIndex, sourceJdbcType);
+        case DATE:              return castDate(value, columnIndex, sourceJdbcType, cal);
+        case TIME:              return castTime(value, columnIndex, sourceJdbcType, cal);
+        case TIMESTAMP:         return castTimestamp(value, columnIndex, sourceJdbcType, cal);
         case VARCHAR_STREAM:    return castAsciiStream(value, columnIndex, sourceJdbcType);
         case UNICODE_STREAM:    return castUnicodeStream(value, columnIndex, sourceJdbcType);
         case BINARY_STREAM:     return castBinaryStream(value, columnIndex, sourceJdbcType);
         case CHARACTER_STREAM:  return castCharacterStream(value, columnIndex, sourceJdbcType);
         case CLOB_STREAM:       return castClob(value, columnIndex, sourceJdbcType);
+        case OBJECT_STREAM:     return castObject(value, columnIndex, sourceJdbcType, type);
+        case NULL:              return null;
         default:
           throw new SQLException(
             format("Unsupported JDBC type %d for column %d", targetJdbcType, columnIndex),

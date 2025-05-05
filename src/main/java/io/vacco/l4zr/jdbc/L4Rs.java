@@ -53,7 +53,7 @@ public class L4Rs implements ResultSet {
     return wasNull;
   }
 
-  private Object tryCast(int columnIndex, int targetJdbcType, int scale) throws SQLException {
+  private Object tryCast(int columnIndex, int targetJdbcType, int scale, Calendar cal, Class<?> type) throws SQLException {
     checkClosed();
     checkRow(currentRow, result, isClosed);
     checkColumn(columnIndex, result);
@@ -63,78 +63,90 @@ public class L4Rs implements ResultSet {
       return null; // getXXX will handle primitive defaults
     }
     int sourceJdbcType = meta.getColumnType(columnIndex);
-    return convertValue(value, sourceJdbcType, targetJdbcType, columnIndex, scale);
+    return convertValue(value, sourceJdbcType, targetJdbcType, columnIndex, scale, cal, type);
+  }
+
+  private Object tryCast(int columnIndex, int targetJdbcType, int scale, Calendar cal) throws SQLException {
+    return tryCast(columnIndex, targetJdbcType, scale, cal, null);
+  }
+
+  private Object tryCast(int columnIndex, int targetJdbcType) throws SQLException {
+    return tryCast(columnIndex, targetJdbcType, 0, null, null);
+  }
+
+  private Object tryCast(int columnIndex, Class<?> type) throws SQLException {
+    return tryCast(columnIndex, OBJECT_STREAM, 0, null, type);
   }
 
   @Override public String getString(int columnIndex) throws SQLException {
-    return (String) tryCast(columnIndex, Types.VARCHAR, 0);
+    return (String) tryCast(columnIndex, Types.VARCHAR);
   }
 
   @Override public boolean getBoolean(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.BOOLEAN, 0);
+    var value = tryCast(columnIndex, Types.BOOLEAN);
     return value != null ? (Boolean) value : false;
   }
 
   @Override public byte getByte(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.TINYINT, 0);
+    var value = tryCast(columnIndex, Types.TINYINT);
     return value != null ? (Byte) value : 0;
   }
 
   @Override public short getShort(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.SMALLINT, 0);
+    var value = tryCast(columnIndex, Types.SMALLINT);
     return value != null ? (Short) value : 0;
   }
 
   @Override public int getInt(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.INTEGER, 0);
+    var value = tryCast(columnIndex, Types.INTEGER);
     return value != null ? (Integer) value : 0;
   }
 
   @Override public long getLong(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.BIGINT, 0);
+    var value = tryCast(columnIndex, Types.BIGINT);
     return value != null ? (Long) value : 0L;
   }
 
   @Override public float getFloat(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.FLOAT, 0);
+    var value = tryCast(columnIndex, Types.FLOAT);
     return value != null ? (Float) value : 0.0f;
   }
 
   @Override public double getDouble(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.DOUBLE, 0);
+    var value = tryCast(columnIndex, Types.DOUBLE);
     return value != null ? (Double) value : 0.0;
   }
 
   @Override public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-    return (BigDecimal) tryCast(columnIndex, Types.DECIMAL, scale);
+    return (BigDecimal) tryCast(columnIndex, Types.DECIMAL, scale, null);
   }
 
   @Override public byte[] getBytes(int columnIndex) throws SQLException {
-    return (byte[]) tryCast(columnIndex, Types.BLOB, 0);
+    return (byte[]) tryCast(columnIndex, Types.BLOB);
   }
 
   @Override public Date getDate(int columnIndex) throws SQLException {
-    return (Date) tryCast(columnIndex, Types.DATE, 0);
+    return (Date) tryCast(columnIndex, Types.DATE);
   }
 
   @Override public Time getTime(int columnIndex) throws SQLException {
-    return (Time) tryCast(columnIndex, Types.TIME, 0);
+    return (Time) tryCast(columnIndex, Types.TIME);
   }
 
   @Override public Timestamp getTimestamp(int columnIndex) throws SQLException {
-    return (Timestamp) tryCast(columnIndex, Types.TIMESTAMP, 0);
+    return (Timestamp) tryCast(columnIndex, Types.TIMESTAMP);
   }
 
   @Override public InputStream getAsciiStream(int columnIndex) throws SQLException {
-    return (InputStream) tryCast(columnIndex, L4Jdbc.VARCHAR_STREAM, 0);
+    return (InputStream) tryCast(columnIndex, L4Jdbc.VARCHAR_STREAM);
   }
 
   @Override public InputStream getUnicodeStream(int columnIndex) throws SQLException {
-    return (InputStream) tryCast(columnIndex, L4Jdbc.UNICODE_STREAM, 0);
+    return (InputStream) tryCast(columnIndex, L4Jdbc.UNICODE_STREAM);
   }
 
   @Override public InputStream getBinaryStream(int columnIndex) throws SQLException {
-    return (InputStream) tryCast(columnIndex, L4Jdbc.BINARY_STREAM, 0);
+    return (InputStream) tryCast(columnIndex, L4Jdbc.BINARY_STREAM);
   }
 
   @Override public String getString(String columnLabel) throws SQLException {
@@ -222,7 +234,7 @@ public class L4Rs implements ResultSet {
 
   @Override public Object getObject(int columnIndex) throws SQLException {
     var targetJdbcType = meta.getColumnType(columnIndex);
-    return tryCast(columnIndex, targetJdbcType, 0);
+    return tryCast(columnIndex, targetJdbcType);
   }
 
   @Override public Object getObject(String columnLabel) throws SQLException {
@@ -244,7 +256,7 @@ public class L4Rs implements ResultSet {
   }
 
   @Override public Reader getCharacterStream(int columnIndex) throws SQLException {
-    return (Reader) tryCast(columnIndex, CHARACTER_STREAM, 0);
+    return (Reader) tryCast(columnIndex, CHARACTER_STREAM);
   }
 
   @Override public Reader getCharacterStream(String columnLabel) throws SQLException {
@@ -438,9 +450,15 @@ public class L4Rs implements ResultSet {
     return statement;
   }
 
-  @Override
-  public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
-    return null;
+  @Override public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
+    var typeName = meta.getColumnTypeName(columnIndex);
+    if (map != null && map.containsKey(typeName)) {
+      throw new SQLException(
+        format("Custom type mapping for %s not supported in SQLite", typeName),
+        SqlStateFeatureNotSupported
+      );
+    }
+    return getObject(columnIndex);
   }
 
   @Override public Ref getRef(int columnIndex) throws SQLException {
@@ -448,27 +466,24 @@ public class L4Rs implements ResultSet {
   }
 
   @Override public Blob getBlob(int columnIndex) throws SQLException {
-    var bytes = (byte[]) tryCast(columnIndex, Types.BLOB, 0);
+    var bytes = (byte[]) tryCast(columnIndex, Types.BLOB);
     return bytes != null ? new SerialBlob(bytes) : null;
   }
 
   @Override public Clob getClob(int columnIndex) throws SQLException {
-    return (Clob) tryCast(columnIndex, CLOB_STREAM, 0);
+    return (Clob) tryCast(columnIndex, CLOB_STREAM);
   }
 
-  @Override
-  public Array getArray(int columnIndex) throws SQLException {
-    return null;
+  @Override public Array getArray(int columnIndex) throws SQLException {
+    throw new SQLException("ARRAY type not supported in SQLite", SqlStateFeatureNotSupported);
   }
 
-  @Override
-  public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
-    return null;
+  @Override public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
+    return getObject(findColumn(columnLabel), map);
   }
 
-  @Override
-  public Ref getRef(String columnLabel) throws SQLException {
-    return null;
+  @Override public Ref getRef(String columnLabel) throws SQLException {
+    return getRef(findColumn(columnLabel));
   }
 
   @Override public Blob getBlob(String columnLabel) throws SQLException {
@@ -479,39 +494,32 @@ public class L4Rs implements ResultSet {
     return getClob(findColumn(columnLabel));
   }
 
-  @Override
-  public Array getArray(String columnLabel) throws SQLException {
-    return null;
+  @Override public Array getArray(String columnLabel) throws SQLException {
+    return getArray(findColumn(columnLabel));
   }
 
-  @Override
-  public Date getDate(int columnIndex, Calendar cal) throws SQLException {
-    return null;
+  @Override public Date getDate(int columnIndex, Calendar cal) throws SQLException {
+    return (Date) tryCast(columnIndex, Types.DATE, 0, cal);
   }
 
-  @Override
-  public Date getDate(String columnLabel, Calendar cal) throws SQLException {
-    return null;
+  @Override public Date getDate(String columnLabel, Calendar cal) throws SQLException {
+    return getDate(findColumn(columnLabel), cal);
   }
 
-  @Override
-  public Time getTime(int columnIndex, Calendar cal) throws SQLException {
-    return null;
+  @Override public Time getTime(int columnIndex, Calendar cal) throws SQLException {
+    return (Time) tryCast(columnIndex, Types.TIME, 0, cal);
   }
 
-  @Override
-  public Time getTime(String columnLabel, Calendar cal) throws SQLException {
-    return null;
+  @Override public Time getTime(String columnLabel, Calendar cal) throws SQLException {
+    return getTime(findColumn(columnLabel), cal);
   }
 
-  @Override
-  public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
-    return null;
+  @Override public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
+    return (Timestamp) tryCast(columnIndex, Types.TIMESTAMP, 0, cal);
   }
 
-  @Override
-  public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
-    return null;
+  @Override public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
+    return getTimestamp(findColumn(columnLabel), cal);
   }
 
   @Override
@@ -637,13 +645,13 @@ public class L4Rs implements ResultSet {
   @Override public void updateNClob(String columnLabel, Reader reader) throws SQLException { noUpdateImpl(); }
 
   @Override
+  @SuppressWarnings("unchecked")
   public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
-    return null;
+    return (T) tryCast(columnIndex, type);
   }
 
-  @Override
-  public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
-    return null;
+  @Override public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
+    return getObject(findColumn(columnLabel), type);
   }
 
   @Override

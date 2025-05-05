@@ -4,6 +4,7 @@ import io.vacco.l4zr.rqlite.L4Result;
 import javax.sql.rowset.serial.SerialClob;
 import java.io.*;
 import java.math.*;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.sql.Date;
@@ -22,6 +23,9 @@ public class L4Jdbc {
   public static final int CHARACTER_STREAM = Types.VARCHAR + 1002;
   public static final int CLOB_STREAM = Types.VARCHAR + 1003;
   public static final int OBJECT_STREAM = Types.OTHER + 1000;
+  public static final int URL_STREAM = Types.DATALINK + 1000;
+  public static final int NCLOB_STREAM = Types.NCLOB + 1000;
+  public static final int NCHARACTER_STREAM = Types.NVARCHAR + 1000;
 
   public static final String
     RqInteger = "INTEGER", RqNumeric = "NUMERIC",
@@ -277,6 +281,37 @@ public class L4Jdbc {
     return null;
   }
 
+  public static URL castURL(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == VARCHAR) {
+      try {
+        return new URL(value);
+      } catch (MalformedURLException e) {
+        throw new SQLException(
+          format("Invalid URL format for column %d: %s", columnIndex, value),
+          SqlStateInvalidType, e
+        );
+      }
+    }
+    castError(value, columnIndex, sourceJdbcType, DATALINK);
+    return null;
+  }
+
+  public static NClob castNClob(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == VARCHAR) {
+      return new L4NClob(value.toCharArray());
+    }
+    castError(value, columnIndex, sourceJdbcType, NCLOB);
+    return null;
+  }
+
+  public static Reader castNCharacterStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == VARCHAR) {
+      return new StringReader(value);
+    }
+    castError(value, columnIndex, sourceJdbcType, NVARCHAR);
+    return null;
+  }
+
   public static <T> T castObject(String value, int columnIndex, int sourceJdbcType, Class<T> type) throws SQLException {
     if (type == null) {
       throw new SQLException("Target type cannot be null for column " + columnIndex, SqlStateInvalidType);
@@ -339,6 +374,9 @@ public class L4Jdbc {
         case CHARACTER_STREAM:  return castCharacterStream(value, columnIndex, sourceJdbcType);
         case CLOB_STREAM:       return castClob(value, columnIndex, sourceJdbcType);
         case OBJECT_STREAM:     return castObject(value, columnIndex, sourceJdbcType, type);
+        case URL_STREAM:        return castURL(value, columnIndex, sourceJdbcType);
+        case NCLOB_STREAM:      return castNClob(value, columnIndex, sourceJdbcType);
+        case NCHARACTER_STREAM: return castNCharacterStream(value, columnIndex, sourceJdbcType);
         case NULL:              return null;
         default:
           throw new SQLException(

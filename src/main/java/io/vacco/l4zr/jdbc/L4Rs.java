@@ -522,14 +522,12 @@ public class L4Rs implements ResultSet {
     return getTimestamp(findColumn(columnLabel), cal);
   }
 
-  @Override
-  public URL getURL(int columnIndex) throws SQLException {
-    return null;
+  @Override public URL getURL(int columnIndex) throws SQLException {
+    return (URL) tryCast(columnIndex, URL_STREAM, 0, null, null);
   }
 
-  @Override
-  public URL getURL(String columnLabel) throws SQLException {
-    return null;
+  @Override public URL getURL(String columnLabel) throws SQLException {
+    return getURL(findColumn(columnLabel));
   }
 
   @Override public void updateRef(int columnIndex, Ref x) throws SQLException { noUpdateImpl(); }
@@ -572,47 +570,39 @@ public class L4Rs implements ResultSet {
   @Override public void updateNClob(int columnIndex, NClob nClob) throws SQLException { noUpdateImpl(); }
   @Override public void updateNClob(String columnLabel, NClob nClob) throws SQLException { noUpdateImpl(); }
 
-  @Override
-  public NClob getNClob(int columnIndex) throws SQLException {
-    return null;
+  @Override public NClob getNClob(int columnIndex) throws SQLException {
+    return (NClob) tryCast(columnIndex, NCLOB_STREAM, 0, null, null);
   }
 
-  @Override
-  public NClob getNClob(String columnLabel) throws SQLException {
-    return null;
+  @Override public NClob getNClob(String columnLabel) throws SQLException {
+    return getNClob(findColumn(columnLabel));
   }
 
-  @Override
-  public SQLXML getSQLXML(int columnIndex) throws SQLException {
-    return null;
+  @Override public SQLXML getSQLXML(int columnIndex) throws SQLException {
+    throw new SQLException("SQLXML type not supported in SQLite", SqlStateFeatureNotSupported);
   }
 
-  @Override
-  public SQLXML getSQLXML(String columnLabel) throws SQLException {
-    return null;
+  @Override public SQLXML getSQLXML(String columnLabel) throws SQLException {
+    return getSQLXML(findColumn(columnLabel));
   }
 
   @Override public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException { noUpdateImpl(); }
   @Override public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException { noUpdateImpl(); }
 
-  @Override
-  public String getNString(int columnIndex) throws SQLException {
-    return "";
+  @Override public String getNString(int columnIndex) throws SQLException {
+    return (String) tryCast(columnIndex, Types.VARCHAR, 0, null, null);
   }
 
-  @Override
-  public String getNString(String columnLabel) throws SQLException {
-    return "";
+  @Override public String getNString(String columnLabel) throws SQLException {
+    return getNString(findColumn(columnLabel));
   }
 
-  @Override
-  public Reader getNCharacterStream(int columnIndex) throws SQLException {
-    return null;
+  @Override public Reader getNCharacterStream(int columnIndex) throws SQLException {
+    return (Reader) tryCast(columnIndex, NCHARACTER_STREAM, 0, null, null);
   }
 
-  @Override
-  public Reader getNCharacterStream(String columnLabel) throws SQLException {
-    return null;
+  @Override public Reader getNCharacterStream(String columnLabel) throws SQLException {
+    return getNCharacterStream(findColumn(columnLabel));
   }
 
   @Override public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException { noUpdateImpl(); }

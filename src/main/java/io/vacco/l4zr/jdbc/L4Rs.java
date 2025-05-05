@@ -1,13 +1,15 @@
 package io.vacco.l4zr.jdbc;
 
 import io.vacco.l4zr.rqlite.L4Result;
-
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
+
+import static io.vacco.l4zr.jdbc.L4Jdbc.*;
+import static java.lang.String.format;
 
 public class L4Rs implements ResultSet {
 
@@ -17,17 +19,11 @@ public class L4Rs implements ResultSet {
   private int currentRow = -1; // Before first row
   private boolean isClosed = false;
   private boolean wasNull = false;
-  private final int resultSetType;
-  private final int resultSetConcurrency;
-  private int fetchDirection = ResultSet.FETCH_FORWARD;
-  private int fetchSize = 0;
 
-  public L4Rs(L4Result result, Statement statement, int resultSetType, int resultSetConcurrency) {
+  public L4Rs(L4Result result, Statement statement) {
     this.result = Objects.requireNonNull(result);
     this.meta = new L4RsMeta(result);
     this.statement = statement;
-    this.resultSetType = resultSetType;
-    this.resultSetConcurrency = resultSetConcurrency;
   }
 
   private void checkClosed() throws SQLException {
@@ -50,19 +46,31 @@ public class L4Rs implements ResultSet {
     isClosed = true;
   }
 
-  @Override
-  public boolean wasNull() throws SQLException {
-    return false;
+  @Override public boolean wasNull() throws SQLException {
+    checkClosed();
+    return wasNull;
   }
 
-  @Override
-  public String getString(int columnIndex) throws SQLException {
-    return "";
+  private Object tryCast(int columnIndex, int targetJdbcType) throws SQLException {
+    checkClosed();
+    checkRow(currentRow, result, isClosed);
+    checkColumn(columnIndex, result);
+    var value = result.values.get(currentRow).get(columnIndex - 1);
+    wasNull = (value == null);
+    if (wasNull) {
+      return null; // getXXX will handle primitive defaults
+    }
+    int sourceJdbcType = meta.getColumnType(columnIndex);
+    return convertValue(value, sourceJdbcType, targetJdbcType, columnIndex);
   }
 
-  @Override
-  public boolean getBoolean(int columnIndex) throws SQLException {
-    return false;
+  @Override public String getString(int columnIndex) throws SQLException {
+    return (String) tryCast(columnIndex, Types.VARCHAR);
+  }
+
+  @Override public boolean getBoolean(int columnIndex) throws SQLException {
+    var value = tryCast(columnIndex, Types.BOOLEAN);
+    return value != null ? (Boolean) value : false;
   }
 
   @Override
@@ -75,24 +83,24 @@ public class L4Rs implements ResultSet {
     return 0;
   }
 
-  @Override
-  public int getInt(int columnIndex) throws SQLException {
-    return 0;
+  @Override public int getInt(int columnIndex) throws SQLException {
+    var value = tryCast(columnIndex, Types.INTEGER);
+    return value != null ? (Integer) value : 0;
   }
 
-  @Override
-  public long getLong(int columnIndex) throws SQLException {
-    return 0;
+  @Override public long getLong(int columnIndex) throws SQLException {
+    var value = tryCast(columnIndex, Types.BIGINT);
+    return value != null ? (Long) value : 0L;
   }
 
-  @Override
-  public float getFloat(int columnIndex) throws SQLException {
-    return 0;
+  @Override public float getFloat(int columnIndex) throws SQLException {
+    var value = tryCast(columnIndex, Types.FLOAT);
+    return value != null ? (Float) value : 0.0f;
   }
 
-  @Override
-  public double getDouble(int columnIndex) throws SQLException {
-    return 0;
+  @Override public double getDouble(int columnIndex) throws SQLException {
+    var value = tryCast(columnIndex, Types.DOUBLE);
+    return value != null ? (Double) value : 0.0;
   }
 
   @Override
@@ -100,24 +108,20 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public byte[] getBytes(int columnIndex) throws SQLException {
-    return new byte[0];
+  @Override public byte[] getBytes(int columnIndex) throws SQLException {
+    return (byte[]) tryCast(columnIndex, Types.BLOB);
   }
 
-  @Override
-  public Date getDate(int columnIndex) throws SQLException {
-    return null;
+  @Override public Date getDate(int columnIndex) throws SQLException {
+    return (Date) tryCast(columnIndex, Types.DATE);
   }
 
-  @Override
-  public Time getTime(int columnIndex) throws SQLException {
-    return null;
+  @Override public Time getTime(int columnIndex) throws SQLException {
+    return (Time) tryCast(columnIndex, Types.TIME);
   }
 
-  @Override
-  public Timestamp getTimestamp(int columnIndex) throws SQLException {
-    return null;
+  @Override public Timestamp getTimestamp(int columnIndex) throws SQLException {
+    return (Timestamp) tryCast(columnIndex, Types.TIMESTAMP);
   }
 
   @Override
@@ -135,9 +139,8 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public String getString(String columnLabel) throws SQLException {
-    return "";
+  @Override public String getString(String columnLabel) throws SQLException {
+    return getString(findColumn(columnLabel));
   }
 
   @Override
@@ -215,19 +218,18 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public SQLWarning getWarnings() throws SQLException {
+  @Override public SQLWarning getWarnings() throws SQLException {
+    checkClosed();
     return null;
   }
 
-  @Override
-  public void clearWarnings() throws SQLException {
-
+  @Override public void clearWarnings() throws SQLException {
+    checkClosed();
   }
 
-  @Override
-  public String getCursorName() throws SQLException {
-    return "";
+  @Override public String getCursorName() throws SQLException {
+    checkClosed();
+    throw new SQLException("Cursor names not supported", SqlStateFeatureNotSupported);
   }
 
   @Override public ResultSetMetaData getMetaData() throws SQLException {
@@ -245,9 +247,18 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public int findColumn(String columnLabel) throws SQLException {
-    return 0;
+  @Override public int findColumn(String columnLabel) throws SQLException {
+    checkClosed();
+    checkColumnLabel(columnLabel, result);
+    for (int i = 0; i < result.columns.size(); i++) {
+      if (columnLabel.equalsIgnoreCase(result.columns.get(i))) {
+        return i + 1;
+      }
+    }
+    throw new SQLException(
+      format("Column not found: %s", columnLabel),
+      SqlStateInvalidColumn
+    );
   }
 
   @Override
@@ -270,335 +281,179 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public boolean isBeforeFirst() throws SQLException {
+  @Override public boolean isBeforeFirst() throws SQLException {
+    checkClosed();
+    return !result.values.isEmpty() && currentRow == -1;
+  }
+
+  @Override public boolean isAfterLast() throws SQLException {
+    checkClosed();
+    return !result.values.isEmpty() && currentRow >= result.values.size();
+  }
+
+  @Override public boolean isFirst() throws SQLException {
+    checkClosed();
+    return !result.values.isEmpty() && currentRow == 0;
+  }
+
+  @Override public boolean isLast() throws SQLException {
+    checkClosed();
+    return !result.values.isEmpty() && currentRow == result.values.size() - 1;
+  }
+
+  private void noScrollingImpl() throws SQLException {
+    checkClosed();
+    throw new SQLException("Scrolling not supported for TYPE_FORWARD_ONLY", SqlStateFeatureNotSupported);
+  }
+
+  @Override public void beforeFirst() throws SQLException {
+    noScrollingImpl();
+  }
+
+  @Override public void afterLast() throws SQLException {
+    noScrollingImpl();
+  }
+
+  @Override public boolean first() throws SQLException {
+    noScrollingImpl();
     return false;
   }
 
-  @Override
-  public boolean isAfterLast() throws SQLException {
+  @Override public boolean last() throws SQLException {
+    noScrollingImpl();
     return false;
   }
 
-  @Override
-  public boolean isFirst() throws SQLException {
+  @Override public int getRow() throws SQLException {
+    checkClosed();
+    if (result.values.isEmpty() || currentRow < 0 || currentRow >= result.values.size()) {
+      return 0;
+    }
+    return currentRow + 1;
+  }
+
+  @Override public boolean absolute(int row) throws SQLException {
+    noScrollingImpl();
     return false;
   }
 
-  @Override
-  public boolean isLast() throws SQLException {
+  @Override public boolean relative(int rows) throws SQLException {
+    noScrollingImpl();
     return false;
   }
 
-  @Override
-  public void beforeFirst() throws SQLException {
-
-  }
-
-  @Override
-  public void afterLast() throws SQLException {
-
-  }
-
-  @Override
-  public boolean first() throws SQLException {
+  @Override public boolean previous() throws SQLException {
+    noScrollingImpl();
     return false;
   }
 
-  @Override
-  public boolean last() throws SQLException {
-    return false;
+  @Override public void setFetchDirection(int direction) throws SQLException {
+    checkClosed();
+    if (direction == ResultSet.FETCH_FORWARD) {
+      return;
+    }
+    throw new SQLException(
+      format("Fetch direction not supported for TYPE_FORWARD_ONLY: %d", direction),
+      SqlStateFeatureNotSupported
+    );
   }
 
-  @Override
-  public int getRow() throws SQLException {
+  @Override public int getFetchDirection() throws SQLException {
+    checkClosed();
+    return ResultSet.FETCH_FORWARD;
+  }
+
+  @Override public void setFetchSize(int rows) throws SQLException {
+    checkClosed();
+    if (rows < 0) {
+      throw new SQLException(
+        format("Fetch size cannot be negative: %d", rows),
+        SqlStateInvalidAttr
+      );
+    }
+  }
+
+  @Override public int getFetchSize() throws SQLException {
+    checkClosed();
     return 0;
   }
 
-  @Override
-  public boolean absolute(int row) throws SQLException {
+  @Override public int getType() throws SQLException {
+    checkClosed();
+    return ResultSet.TYPE_FORWARD_ONLY;
+  }
+
+  @Override public int getConcurrency() throws SQLException {
+    checkClosed();
+    return ResultSet.CONCUR_READ_ONLY;
+  }
+
+  @Override public boolean rowUpdated() throws SQLException {
+    checkClosed();
     return false;
   }
 
-  @Override
-  public boolean relative(int rows) throws SQLException {
+  @Override public boolean rowInserted() throws SQLException {
+    checkClosed();
     return false;
   }
 
-  @Override
-  public boolean previous() throws SQLException {
+  @Override public boolean rowDeleted() throws SQLException {
+    checkClosed();
     return false;
   }
 
-  @Override
-  public void setFetchDirection(int direction) throws SQLException {
-
+  private void noUpdateImpl() throws SQLException {
+    checkClosed();
+    throw new SQLException("Updates not supported", L4Jdbc.SqlStateFeatureNotSupported);
   }
 
-  @Override
-  public int getFetchDirection() throws SQLException {
-    return 0;
-  }
-
-  @Override
-  public void setFetchSize(int rows) throws SQLException {
-
-  }
-
-  @Override
-  public int getFetchSize() throws SQLException {
-    return 0;
-  }
-
-  @Override
-  public int getType() throws SQLException {
-    return 0;
-  }
-
-  @Override
-  public int getConcurrency() throws SQLException {
-    return 0;
-  }
-
-  @Override
-  public boolean rowUpdated() throws SQLException {
-    return false;
-  }
-
-  @Override
-  public boolean rowInserted() throws SQLException {
-    return false;
-  }
-
-  @Override
-  public boolean rowDeleted() throws SQLException {
-    return false;
-  }
-
-  @Override
-  public void updateNull(int columnIndex) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBoolean(int columnIndex, boolean x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateByte(int columnIndex, byte x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateShort(int columnIndex, short x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateInt(int columnIndex, int x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateLong(int columnIndex, long x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateFloat(int columnIndex, float x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateDouble(int columnIndex, double x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBigDecimal(int columnIndex, BigDecimal x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateString(int columnIndex, String x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBytes(int columnIndex, byte[] x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateDate(int columnIndex, Date x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateTime(int columnIndex, Time x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateTimestamp(int columnIndex, Timestamp x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateAsciiStream(int columnIndex, InputStream x, int length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBinaryStream(int columnIndex, InputStream x, int length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateCharacterStream(int columnIndex, Reader x, int length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateObject(int columnIndex, Object x, int scaleOrLength) throws SQLException {
-
-  }
-
-  @Override
-  public void updateObject(int columnIndex, Object x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNull(String columnLabel) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBoolean(String columnLabel, boolean x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateByte(String columnLabel, byte x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateShort(String columnLabel, short x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateInt(String columnLabel, int x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateLong(String columnLabel, long x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateFloat(String columnLabel, float x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateDouble(String columnLabel, double x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBigDecimal(String columnLabel, BigDecimal x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateString(String columnLabel, String x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBytes(String columnLabel, byte[] x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateDate(String columnLabel, Date x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateTime(String columnLabel, Time x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateTimestamp(String columnLabel, Timestamp x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateAsciiStream(String columnLabel, InputStream x, int length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBinaryStream(String columnLabel, InputStream x, int length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateCharacterStream(String columnLabel, Reader reader, int length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateObject(String columnLabel, Object x, int scaleOrLength) throws SQLException {
-
-  }
-
-  @Override
-  public void updateObject(String columnLabel, Object x) throws SQLException {
-
-  }
-
-  @Override
-  public void insertRow() throws SQLException {
-
-  }
-
-  @Override
-  public void updateRow() throws SQLException {
-
-  }
-
-  @Override
-  public void deleteRow() throws SQLException {
-
-  }
-
-  @Override
-  public void refreshRow() throws SQLException {
-
-  }
-
-  @Override
-  public void cancelRowUpdates() throws SQLException {
-
-  }
-
-  @Override
-  public void moveToInsertRow() throws SQLException {
-
-  }
-
-  @Override
-  public void moveToCurrentRow() throws SQLException {
-
-  }
+  @Override public void updateNull(int columnIndex) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBoolean(int columnIndex, boolean x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateByte(int columnIndex, byte x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateShort(int columnIndex, short x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateInt(int columnIndex, int x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateLong(int columnIndex, long x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateFloat(int columnIndex, float x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateDouble(int columnIndex, double x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBigDecimal(int columnIndex, BigDecimal x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateString(int columnIndex, String x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBytes(int columnIndex, byte[] x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateDate(int columnIndex, Date x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateTime(int columnIndex, Time x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateTimestamp(int columnIndex, Timestamp x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateAsciiStream(int columnIndex, InputStream x, int length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBinaryStream(int columnIndex, InputStream x, int length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateCharacterStream(int columnIndex, Reader x, int length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateObject(int columnIndex, Object x, int scaleOrLength) throws SQLException { noUpdateImpl(); }
+  @Override public void updateObject(int columnIndex, Object x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNull(String columnLabel) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBoolean(String columnLabel, boolean x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateByte(String columnLabel, byte x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateShort(String columnLabel, short x) throws SQLException { noUpdateImpl();}
+  @Override public void updateInt(String columnLabel, int x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateLong(String columnLabel, long x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateFloat(String columnLabel, float x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateDouble(String columnLabel, double x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBigDecimal(String columnLabel, BigDecimal x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateString(String columnLabel, String x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBytes(String columnLabel, byte[] x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateDate(String columnLabel, Date x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateTime(String columnLabel, Time x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateTimestamp(String columnLabel, Timestamp x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateAsciiStream(String columnLabel, InputStream x, int length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBinaryStream(String columnLabel, InputStream x, int length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateCharacterStream(String columnLabel, Reader reader, int length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateObject(String columnLabel, Object x, int scaleOrLength) throws SQLException { noUpdateImpl(); }
+  @Override public void updateObject(String columnLabel, Object x) throws SQLException { noUpdateImpl(); }
+
+  @Override public void insertRow() throws SQLException { noUpdateImpl(); }
+  @Override public void updateRow() throws SQLException { noUpdateImpl(); }
+  @Override public void deleteRow() throws SQLException { noUpdateImpl(); }
+  @Override public void refreshRow() throws SQLException { noUpdateImpl(); }
+  @Override public void cancelRowUpdates() throws SQLException { noUpdateImpl(); }
+  @Override public void moveToInsertRow() throws SQLException { noUpdateImpl(); }
+  @Override public void moveToCurrentRow() throws SQLException { noUpdateImpl();}
 
   @Override public Statement getStatement() throws SQLException {
     checkClosed();
@@ -695,94 +550,45 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public void updateRef(int columnIndex, Ref x) throws SQLException {
+  @Override public void updateRef(int columnIndex, Ref x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateRef(String columnLabel, Ref x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBlob(int columnIndex, Blob x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBlob(String columnLabel, Blob x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateClob(int columnIndex, Clob x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateClob(String columnLabel, Clob x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateArray(int columnIndex, Array x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateArray(String columnLabel, Array x) throws SQLException { noUpdateImpl(); }
 
+  @Override public RowId getRowId(int columnIndex) throws SQLException {
+    checkClosed();
+    checkRow(currentRow, result, isClosed);
+    checkColumn(columnIndex, result);
+    throw new SQLException("RowId not supported", SqlStateFeatureNotSupported);
   }
 
-  @Override
-  public void updateRef(String columnLabel, Ref x) throws SQLException {
-
+  @Override public RowId getRowId(String columnLabel) throws SQLException {
+    checkClosed();
+    checkRow(currentRow, result, isClosed);
+    findColumn(columnLabel);
+    throw new SQLException("RowId not supported", SqlStateFeatureNotSupported);
   }
 
-  @Override
-  public void updateBlob(int columnIndex, Blob x) throws SQLException {
+  @Override public void updateRowId(int columnIndex, RowId x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateRowId(String columnLabel, RowId x) throws SQLException { noUpdateImpl(); }
 
-  }
-
-  @Override
-  public void updateBlob(String columnLabel, Blob x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateClob(int columnIndex, Clob x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateClob(String columnLabel, Clob x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateArray(int columnIndex, Array x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateArray(String columnLabel, Array x) throws SQLException {
-
-  }
-
-  @Override
-  public RowId getRowId(int columnIndex) throws SQLException {
-    return null;
-  }
-
-  @Override
-  public RowId getRowId(String columnLabel) throws SQLException {
-    return null;
-  }
-
-  @Override
-  public void updateRowId(int columnIndex, RowId x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateRowId(String columnLabel, RowId x) throws SQLException {
-
-  }
-
-  @Override
-  public int getHoldability() throws SQLException {
-    return 0;
+  @Override public int getHoldability() throws SQLException {
+    checkClosed();
+    return ResultSet.CLOSE_CURSORS_AT_COMMIT;
   }
 
   @Override public boolean isClosed() {
     return isClosed;
   }
 
-  @Override
-  public void updateNString(int columnIndex, String nString) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNString(String columnLabel, String nString) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNClob(int columnIndex, NClob nClob) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNClob(String columnLabel, NClob nClob) throws SQLException {
-
-  }
+  @Override public void updateNString(int columnIndex, String nString) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNString(String columnLabel, String nString) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNClob(int columnIndex, NClob nClob) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNClob(String columnLabel, NClob nClob) throws SQLException { noUpdateImpl(); }
 
   @Override
   public NClob getNClob(int columnIndex) throws SQLException {
@@ -804,15 +610,8 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException {
-
-  }
-
-  @Override
-  public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException {
-
-  }
+  @Override public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException { noUpdateImpl(); }
+  @Override public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException { noUpdateImpl(); }
 
   @Override
   public String getNString(int columnIndex) throws SQLException {
@@ -834,145 +633,34 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateAsciiStream(int columnIndex, InputStream x, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBinaryStream(int columnIndex, InputStream x, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateAsciiStream(String columnLabel, InputStream x, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBinaryStream(String columnLabel, InputStream x, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBlob(int columnIndex, InputStream inputStream, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBlob(String columnLabel, InputStream inputStream, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateClob(int columnIndex, Reader reader, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateClob(String columnLabel, Reader reader, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNClob(int columnIndex, Reader reader, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNClob(String columnLabel, Reader reader, long length) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNCharacterStream(int columnIndex, Reader x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNCharacterStream(String columnLabel, Reader reader) throws SQLException {
-
-  }
-
-  @Override
-  public void updateAsciiStream(int columnIndex, InputStream x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBinaryStream(int columnIndex, InputStream x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateCharacterStream(int columnIndex, Reader x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateAsciiStream(String columnLabel, InputStream x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBinaryStream(String columnLabel, InputStream x) throws SQLException {
-
-  }
-
-  @Override
-  public void updateCharacterStream(String columnLabel, Reader reader) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBlob(int columnIndex, InputStream inputStream) throws SQLException {
-
-  }
-
-  @Override
-  public void updateBlob(String columnLabel, InputStream inputStream) throws SQLException {
-
-  }
-
-  @Override
-  public void updateClob(int columnIndex, Reader reader) throws SQLException {
-
-  }
-
-  @Override
-  public void updateClob(String columnLabel, Reader reader) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNClob(int columnIndex, Reader reader) throws SQLException {
-
-  }
-
-  @Override
-  public void updateNClob(String columnLabel, Reader reader) throws SQLException {
-
-  }
+  @Override public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNCharacterStream(String columnLabel, Reader reader, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateAsciiStream(int columnIndex, InputStream x, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBinaryStream(int columnIndex, InputStream x, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateCharacterStream(int columnIndex, Reader x, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateAsciiStream(String columnLabel, InputStream x, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBinaryStream(String columnLabel, InputStream x, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateCharacterStream(String columnLabel, Reader reader, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBlob(int columnIndex, InputStream inputStream, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBlob(String columnLabel, InputStream inputStream, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateClob(int columnIndex, Reader reader, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateClob(String columnLabel, Reader reader, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNClob(int columnIndex, Reader reader, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNClob(String columnLabel, Reader reader, long length) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNCharacterStream(int columnIndex, Reader x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNCharacterStream(String columnLabel, Reader reader) throws SQLException { noUpdateImpl(); }
+  @Override public void updateAsciiStream(int columnIndex, InputStream x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBinaryStream(int columnIndex, InputStream x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateCharacterStream(int columnIndex, Reader x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateAsciiStream(String columnLabel, InputStream x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBinaryStream(String columnLabel, InputStream x) throws SQLException { noUpdateImpl(); }
+  @Override public void updateCharacterStream(String columnLabel, Reader reader) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBlob(int columnIndex, InputStream inputStream) throws SQLException { noUpdateImpl(); }
+  @Override public void updateBlob(String columnLabel, InputStream inputStream) throws SQLException { noUpdateImpl(); }
+  @Override public void updateClob(int columnIndex, Reader reader) throws SQLException { noUpdateImpl(); }
+  @Override public void updateClob(String columnLabel, Reader reader) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNClob(int columnIndex, Reader reader) throws SQLException { noUpdateImpl(); }
+  @Override public void updateNClob(String columnLabel, Reader reader) throws SQLException { noUpdateImpl(); }
 
   @Override
   public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {

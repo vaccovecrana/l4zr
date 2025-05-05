@@ -17,9 +17,10 @@ public class L4ClientTest {
     if (!GraphicsEnvironment.isHeadless()) {
       it("Interacts with an Rqlite instance", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var status = rq.status();
-        var nodes = rq.nodes();
-        var ready = rq.ready();
+
+        System.out.println(rq.status().toString());
+        System.out.println(rq.nodes().toString());
+        System.out.println(rq.ready());
 
         var res0 = rq.executeSingle(join("\n", "",
           "CREATE TABLE IF NOT EXISTS users (",

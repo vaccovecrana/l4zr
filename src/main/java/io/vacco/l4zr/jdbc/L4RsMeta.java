@@ -1,13 +1,17 @@
 package io.vacco.l4zr.jdbc;
 
 import io.vacco.l4zr.rqlite.L4Result;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
+import java.math.BigDecimal;
+import java.sql.*;
 import java.util.Objects;
 
 import static java.sql.Types.*;
 
 public class L4RsMeta implements ResultSetMetaData {
+
+  public static final String
+    RqInteger = "INTEGER", RqNumeric = "NUMERIC",
+    RqReal = "REAL", RqText = "TEXT", RqBlob = "BLOB";
 
   private final L4Result result;
 
@@ -77,9 +81,9 @@ public class L4RsMeta implements ResultSetMetaData {
       return false; // Fallback for missing type metadata (should be rare).
     }
     var typeUpper = type.toUpperCase();
-    return typeUpper.equals("INTEGER") ||
-      typeUpper.equals("REAL") ||
-      typeUpper.equals("NUMERIC");   // In case rqlite reports DOUBLE.
+    return typeUpper.equals(RqInteger) ||
+      typeUpper.equals(RqReal) ||
+      typeUpper.equals(RqNumeric);   // In case rqlite reports DOUBLE.
   }
 
   @Override public int getColumnDisplaySize(int column) throws SQLException {
@@ -90,11 +94,11 @@ public class L4RsMeta implements ResultSetMetaData {
     }
     var typeUpper = type.toUpperCase();
     switch (typeUpper) {
-      case "INTEGER": return 20; // Covers -9223372036854775808 (19 digits + sign).
-      case "REAL": return 25; // Covers scientific notation (e.g., -1.23456789012345E+308).
-      case "TEXT":
-      case "BLOB": return 255; // Conservative default for strings or blobs.
-      default: return 4; // Fallback for NULL or unknown types.
+      case RqInteger: return 20; // Covers -9223372036854775808 (19 digits + sign).
+      case RqReal:    return 25; // Covers scientific notation (e.g., -1.23456789012345E+308).
+      case RqText:
+      case RqBlob:    return 255; // Conservative default for strings or blobs.
+      default:        return 4; // Fallback for NULL or unknown types.
     }
   }
 
@@ -123,16 +127,12 @@ public class L4RsMeta implements ResultSetMetaData {
     }
     String typeUpper = type.toUpperCase();
     switch (typeUpper) {
-      case "INTEGER":
-      case "NUMERIC":
-        return 19; // Max digits in 64-bit signed integer.
-      case "REAL":
-        return 15; // Approx. significant digits in IEEE 754 double.
-      case "TEXT":
-      case "BLOB":
-        return 255; // Conservative default for strings or blobs.
-      default:
-        return 0; // Fallback for unknown types.
+      case RqInteger:
+      case RqNumeric: return 19; // Max digits in 64-bit signed integer.
+      case RqReal:    return 15; // Approx. significant digits in IEEE 754 double.
+      case RqText:
+      case RqBlob:    return 255; // Conservative default for strings or blobs.
+      default:        return 0; // Fallback for unknown types.
     }
   }
 
@@ -162,37 +162,35 @@ public class L4RsMeta implements ResultSetMetaData {
     }
     var typeUpper = type.toUpperCase();
     switch (typeUpper) {
-      case "INTEGER":
-        return BIGINT; // 64-bit signed integer.
-      case "REAL":
-        return DOUBLE; // Double-precision float.
-      case "TEXT":
-        return VARCHAR; // Variable-length string.
-      case "BLOB":
-        return BLOB; // Binary data.
-      case "NUMERIC":
-        return NUMERIC; // Flexible numeric type.
-      default:
-        return OTHER; // Fallback for unrecognized types.
+      case RqInteger: return BIGINT; // 64-bit signed integer.
+      case RqReal:    return DOUBLE; // Double-precision float.
+      case RqText:    return VARCHAR; // Variable-length string.
+      case RqBlob:    return BLOB; // Binary data.
+      case RqNumeric: return NUMERIC; // Flexible numeric type.
+      default:        return OTHER; // Fallback for unrecognized types.
     }
   }
 
+  /* Return native type name */
   @Override public String getColumnTypeName(int column) throws SQLException {
     checkColumn(column);
     var type = result.types.get(column - 1);
-    return type != null ? type : ""; // Return native type name
+    return type != null ? type : "";
   }
 
+  /* Assume columns might be writable without metadata. */
   @Override public boolean isReadOnly(int column) throws SQLException {
     checkColumn(column);
     return false;
   }
 
+  /* Assume columns are potentially writable, consistent with isReadOnly = false. */
   @Override public boolean isWritable(int column) throws SQLException {
     checkColumn(column);
-    return false;
+    return true;
   }
 
+  /* Cannot guarantee write without metadata. */
   @Override public boolean isDefinitelyWritable(int column) throws SQLException {
     checkColumn(column);
     return false;
@@ -200,15 +198,37 @@ public class L4RsMeta implements ResultSetMetaData {
 
   @Override public String getColumnClassName(int column) throws SQLException {
     checkColumn(column);
-    return "";
+    var type = result.types.get(column - 1); // JDBC is 1-based, List is 0-based.
+    if (type == null) {
+      return Object.class.getCanonicalName(); // Fallback for unknown or NULL types.
+    }
+    var typeUpper = type.toUpperCase();
+    switch (typeUpper) {
+      case RqInteger: return Long.class.getCanonicalName(); // 64-bit signed integer.
+      case RqReal:    return Double.class.getCanonicalName(); // Double-precision float.
+      case RqText:    return String.class.getCanonicalName(); // Variable-length string.
+      case RqBlob:    return byte[].class.getCanonicalName(); // Binary data.
+      case RqNumeric: return BigDecimal.class.getCanonicalName(); // Flexible numeric type.
+      default:        return Object.class.getCanonicalName(); // Fallback for unrecognized types.
+    }
   }
 
+  /* Support ResultSetMetaData and Wrapper. */
   @Override public <T> T unwrap(Class<T> iface) throws SQLException {
-    return null;
+    if (iface == null) {
+      throw new SQLException("Interface cannot be null");
+    }
+    if (iface == ResultSetMetaData.class || iface == Wrapper.class) {
+      return iface.cast(this);
+    }
+    throw new SQLException("Cannot unwrap to " + iface.getName());
   }
 
   @Override public boolean isWrapperFor(Class<?> iface) throws SQLException {
-    return false;
+    if (iface == null) {
+      throw new SQLException("Interface cannot be null");
+    }
+    return iface == ResultSetMetaData.class || iface == Wrapper.class;
   }
 
 }

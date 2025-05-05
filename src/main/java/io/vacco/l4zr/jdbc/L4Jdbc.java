@@ -1,6 +1,10 @@
 package io.vacco.l4zr.jdbc;
 
 import io.vacco.l4zr.rqlite.L4Result;
+import javax.sql.rowset.serial.SerialClob;
+import java.io.*;
+import java.math.*;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -10,6 +14,12 @@ import static java.sql.Types.*;
 import static java.lang.String.format;
 
 public class L4Jdbc {
+
+  public static final int VARCHAR_STREAM = Types.VARCHAR + 1000; // Custom type to distinguish stream
+  public static final int UNICODE_STREAM = Types.VARCHAR + 1001; // Custom type for deprecated Unicode stream
+  public static final int BINARY_STREAM = Types.BLOB + 1000;     // Custom type for binary stream
+  public static final int CHARACTER_STREAM = Types.VARCHAR + 1002;
+  public static final int CLOB_STREAM = Types.VARCHAR + 1003;
 
   public static final String
     RqInteger = "INTEGER", RqNumeric = "NUMERIC",
@@ -104,11 +114,109 @@ public class L4Jdbc {
     return -1;
   }
 
+  public static byte castByte(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == INTEGER) {
+      long longVal = Long.parseLong(value);
+      if (longVal >= Byte.MIN_VALUE && longVal <= Byte.MAX_VALUE) {
+        return (byte) longVal;
+      }
+      rangeError(value, columnIndex, TINYINT);
+    }
+    castError(value, columnIndex, sourceJdbcType, TINYINT);
+    return -1;
+  }
+
+  public static short castShort(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == INTEGER) {
+      long longVal = Long.parseLong(value);
+      if (longVal >= Short.MIN_VALUE && longVal <= Short.MAX_VALUE) {
+        return (short) longVal;
+      }
+      rangeError(value, columnIndex, SMALLINT);
+    }
+    castError(value, columnIndex, sourceJdbcType, SMALLINT);
+    return -1;
+  }
+
+  public static BigDecimal castBigDecimal(String value, int columnIndex, int sourceJdbcType, int scale) throws SQLException {
+    if (scale < 0) {
+      throw new SQLException(
+        format("Invalid scale %d for column %d", scale, columnIndex),
+        SqlStateInvalidType
+      );
+    }
+    if (sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE || sourceJdbcType == VARCHAR) {
+      try {
+        var bd = new BigDecimal(value);
+        return bd.setScale(scale, RoundingMode.HALF_UP);
+      } catch (NumberFormatException e) {
+        throw new SQLException(
+          format("Invalid numeric format for column %d: %s", columnIndex, value),
+          SqlStateInvalidType, e
+        );
+      }
+    }
+    castError(value, columnIndex, sourceJdbcType, DECIMAL);
+    return null;
+  }
+
+  public static InputStream castAsciiStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == VARCHAR || sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE) {
+      var asciiBytes = value.getBytes(StandardCharsets.US_ASCII); // Convert non-ASCII characters to '?' (ASCII fallback)
+      return new ByteArrayInputStream(asciiBytes);
+    }
+    castError(value, columnIndex, sourceJdbcType, VARCHAR);
+    return null;
+  }
+
+  public static InputStream castUnicodeStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == VARCHAR || sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE) {
+      var unicodeBytes = value.getBytes(StandardCharsets.UTF_16BE); // Encode as UTF-16BE (JDBC standard for getUnicodeStream)
+      return new ByteArrayInputStream(unicodeBytes);
+    }
+    castError(value, columnIndex, sourceJdbcType, VARCHAR);
+    return null;
+  }
+
+  public static InputStream castBinaryStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == BLOB) {
+      try {
+        var bytes = Base64.getDecoder().decode(value);
+        return new ByteArrayInputStream(bytes);
+      } catch (IllegalArgumentException e) {
+        throw new SQLException(
+          format("Base64 decoding error for column %d: %s", columnIndex, value),
+          SqlStateInvalidType, e
+        );
+      }
+    } else if (sourceJdbcType == VARCHAR || sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE) {
+      return new ByteArrayInputStream(value.getBytes(StandardCharsets.UTF_8)); // Encode TEXT/INTEGER/REAL as UTF-8
+    }
+    castError(value, columnIndex, sourceJdbcType, BLOB);
+    return null;
+  }
+
+  public static Reader castCharacterStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == VARCHAR || sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE) {
+      return new StringReader(value);
+    }
+    castError(value, columnIndex, sourceJdbcType, VARCHAR);
+    return null;
+  }
+
   public static byte[] castBlob(String value, int columnIndex, int sourceJdbcType) throws SQLException {
     if (sourceJdbcType == BLOB) {
       return Base64.getDecoder().decode(value);
     }
     castError(value, columnIndex, sourceJdbcType, BLOB);
+    return null;
+  }
+
+  public static Clob castClob(String value, int columnIndex, int sourceJdbcType) throws SQLException {
+    if (sourceJdbcType == VARCHAR) {
+      return new SerialClob(value.toCharArray());
+    }
+    castError(value, columnIndex, sourceJdbcType, CLOB);
     return null;
   }
 
@@ -151,20 +259,28 @@ public class L4Jdbc {
     return null;
   }
 
-  public static Object convertValue(String value, int sourceJdbcType, int targetJdbcType, int columnIndex) throws SQLException {
+  public static Object convertValue(String value, int sourceJdbcType, int targetJdbcType, int columnIndex, int scale) throws SQLException {
     try {
       switch (targetJdbcType) {
         case VARCHAR:
-        case CHAR:      return value;
-        case BOOLEAN:   return castBoolean(value, columnIndex, sourceJdbcType);
-        case INTEGER:   return castInteger(value, columnIndex, sourceJdbcType);
-        case BIGINT:    return castLong(value, columnIndex, sourceJdbcType);
+        case CHAR:              return value;
+        case BOOLEAN:           return castBoolean(value, columnIndex, sourceJdbcType);
+        case INTEGER:           return castInteger(value, columnIndex, sourceJdbcType);
+        case BIGINT:            return castLong(value, columnIndex, sourceJdbcType);
         case DOUBLE:
-        case FLOAT:     return castDouble(value, columnIndex, sourceJdbcType);
-        case BLOB:      return castBlob(value, columnIndex, sourceJdbcType);
-        case DATE:      return castDate(value, columnIndex, sourceJdbcType);
-        case TIME:      return castTime(value, columnIndex, sourceJdbcType);
-        case TIMESTAMP: return castTimestamp(value, columnIndex, sourceJdbcType);
+        case FLOAT:             return castDouble(value, columnIndex, sourceJdbcType);
+        case BLOB:              return castBlob(value, columnIndex, sourceJdbcType);
+        case TINYINT:           return castByte(value, columnIndex, sourceJdbcType);
+        case SMALLINT:          return castShort(value, columnIndex, sourceJdbcType);
+        case DECIMAL:           return castBigDecimal(value, columnIndex, sourceJdbcType, scale);
+        case DATE:              return castDate(value, columnIndex, sourceJdbcType);
+        case TIME:              return castTime(value, columnIndex, sourceJdbcType);
+        case TIMESTAMP:         return castTimestamp(value, columnIndex, sourceJdbcType);
+        case VARCHAR_STREAM:    return castAsciiStream(value, columnIndex, sourceJdbcType);
+        case UNICODE_STREAM:    return castUnicodeStream(value, columnIndex, sourceJdbcType);
+        case BINARY_STREAM:     return castBinaryStream(value, columnIndex, sourceJdbcType);
+        case CHARACTER_STREAM:  return castCharacterStream(value, columnIndex, sourceJdbcType);
+        case CLOB_STREAM:       return castClob(value, columnIndex, sourceJdbcType);
         default:
           throw new SQLException(
             format("Unsupported JDBC type %d for column %d", targetJdbcType, columnIndex),

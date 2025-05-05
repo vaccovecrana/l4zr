@@ -1,6 +1,8 @@
 package io.vacco.l4zr.jdbc;
 
 import io.vacco.l4zr.rqlite.L4Result;
+
+import javax.sql.rowset.serial.SerialBlob;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
@@ -51,7 +53,7 @@ public class L4Rs implements ResultSet {
     return wasNull;
   }
 
-  private Object tryCast(int columnIndex, int targetJdbcType) throws SQLException {
+  private Object tryCast(int columnIndex, int targetJdbcType, int scale) throws SQLException {
     checkClosed();
     checkRow(currentRow, result, isClosed);
     checkColumn(columnIndex, result);
@@ -61,161 +63,142 @@ public class L4Rs implements ResultSet {
       return null; // getXXX will handle primitive defaults
     }
     int sourceJdbcType = meta.getColumnType(columnIndex);
-    return convertValue(value, sourceJdbcType, targetJdbcType, columnIndex);
+    return convertValue(value, sourceJdbcType, targetJdbcType, columnIndex, scale);
   }
 
   @Override public String getString(int columnIndex) throws SQLException {
-    return (String) tryCast(columnIndex, Types.VARCHAR);
+    return (String) tryCast(columnIndex, Types.VARCHAR, 0);
   }
 
   @Override public boolean getBoolean(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.BOOLEAN);
+    var value = tryCast(columnIndex, Types.BOOLEAN, 0);
     return value != null ? (Boolean) value : false;
   }
 
-  @Override
-  public byte getByte(int columnIndex) throws SQLException {
-    return 0;
+  @Override public byte getByte(int columnIndex) throws SQLException {
+    var value = tryCast(columnIndex, Types.TINYINT, 0);
+    return value != null ? (Byte) value : 0;
   }
 
-  @Override
-  public short getShort(int columnIndex) throws SQLException {
-    return 0;
+  @Override public short getShort(int columnIndex) throws SQLException {
+    var value = tryCast(columnIndex, Types.SMALLINT, 0);
+    return value != null ? (Short) value : 0;
   }
 
   @Override public int getInt(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.INTEGER);
+    var value = tryCast(columnIndex, Types.INTEGER, 0);
     return value != null ? (Integer) value : 0;
   }
 
   @Override public long getLong(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.BIGINT);
+    var value = tryCast(columnIndex, Types.BIGINT, 0);
     return value != null ? (Long) value : 0L;
   }
 
   @Override public float getFloat(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.FLOAT);
+    var value = tryCast(columnIndex, Types.FLOAT, 0);
     return value != null ? (Float) value : 0.0f;
   }
 
   @Override public double getDouble(int columnIndex) throws SQLException {
-    var value = tryCast(columnIndex, Types.DOUBLE);
+    var value = tryCast(columnIndex, Types.DOUBLE, 0);
     return value != null ? (Double) value : 0.0;
   }
 
-  @Override
-  public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-    return null;
+  @Override public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
+    return (BigDecimal) tryCast(columnIndex, Types.DECIMAL, scale);
   }
 
   @Override public byte[] getBytes(int columnIndex) throws SQLException {
-    return (byte[]) tryCast(columnIndex, Types.BLOB);
+    return (byte[]) tryCast(columnIndex, Types.BLOB, 0);
   }
 
   @Override public Date getDate(int columnIndex) throws SQLException {
-    return (Date) tryCast(columnIndex, Types.DATE);
+    return (Date) tryCast(columnIndex, Types.DATE, 0);
   }
 
   @Override public Time getTime(int columnIndex) throws SQLException {
-    return (Time) tryCast(columnIndex, Types.TIME);
+    return (Time) tryCast(columnIndex, Types.TIME, 0);
   }
 
   @Override public Timestamp getTimestamp(int columnIndex) throws SQLException {
-    return (Timestamp) tryCast(columnIndex, Types.TIMESTAMP);
+    return (Timestamp) tryCast(columnIndex, Types.TIMESTAMP, 0);
   }
 
-  @Override
-  public InputStream getAsciiStream(int columnIndex) throws SQLException {
-    return null;
+  @Override public InputStream getAsciiStream(int columnIndex) throws SQLException {
+    return (InputStream) tryCast(columnIndex, L4Jdbc.VARCHAR_STREAM, 0);
   }
 
-  @Override
-  public InputStream getUnicodeStream(int columnIndex) throws SQLException {
-    return null;
+  @Override public InputStream getUnicodeStream(int columnIndex) throws SQLException {
+    return (InputStream) tryCast(columnIndex, L4Jdbc.UNICODE_STREAM, 0);
   }
 
-  @Override
-  public InputStream getBinaryStream(int columnIndex) throws SQLException {
-    return null;
+  @Override public InputStream getBinaryStream(int columnIndex) throws SQLException {
+    return (InputStream) tryCast(columnIndex, L4Jdbc.BINARY_STREAM, 0);
   }
 
   @Override public String getString(String columnLabel) throws SQLException {
     return getString(findColumn(columnLabel));
   }
 
-  @Override
-  public boolean getBoolean(String columnLabel) throws SQLException {
-    return false;
+  @Override public boolean getBoolean(String columnLabel) throws SQLException {
+    return getBoolean(findColumn(columnLabel));
   }
 
-  @Override
-  public byte getByte(String columnLabel) throws SQLException {
-    return 0;
+  @Override public byte getByte(String columnLabel) throws SQLException {
+    return getByte(findColumn(columnLabel));
   }
 
-  @Override
-  public short getShort(String columnLabel) throws SQLException {
-    return 0;
+  @Override public short getShort(String columnLabel) throws SQLException {
+    return getShort(findColumn(columnLabel));
   }
 
-  @Override
-  public int getInt(String columnLabel) throws SQLException {
-    return 0;
+  @Override public int getInt(String columnLabel) throws SQLException {
+    return getInt(findColumn(columnLabel));
   }
 
-  @Override
-  public long getLong(String columnLabel) throws SQLException {
-    return 0;
+  @Override public long getLong(String columnLabel) throws SQLException {
+    return getLong(findColumn(columnLabel));
   }
 
-  @Override
-  public float getFloat(String columnLabel) throws SQLException {
-    return 0;
+  @Override public float getFloat(String columnLabel) throws SQLException {
+    return getFloat(findColumn(columnLabel));
   }
 
-  @Override
-  public double getDouble(String columnLabel) throws SQLException {
-    return 0;
+  @Override public double getDouble(String columnLabel) throws SQLException {
+    return getDouble(findColumn(columnLabel));
   }
 
-  @Override
-  public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-    return null;
+  @Override public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
+    return getBigDecimal(findColumn(columnLabel), scale);
   }
 
-  @Override
-  public byte[] getBytes(String columnLabel) throws SQLException {
-    return new byte[0];
+  @Override public byte[] getBytes(String columnLabel) throws SQLException {
+    return getBytes(findColumn(columnLabel));
   }
 
-  @Override
-  public Date getDate(String columnLabel) throws SQLException {
-    return null;
+  @Override public Date getDate(String columnLabel) throws SQLException {
+    return getDate(findColumn(columnLabel));
   }
 
-  @Override
-  public Time getTime(String columnLabel) throws SQLException {
-    return null;
+  @Override public Time getTime(String columnLabel) throws SQLException {
+    return getTime(findColumn(columnLabel));
   }
 
-  @Override
-  public Timestamp getTimestamp(String columnLabel) throws SQLException {
-    return null;
+  @Override public Timestamp getTimestamp(String columnLabel) throws SQLException {
+    return getTimestamp(findColumn(columnLabel));
   }
 
-  @Override
-  public InputStream getAsciiStream(String columnLabel) throws SQLException {
-    return null;
+  @Override public InputStream getAsciiStream(String columnLabel) throws SQLException {
+    return getAsciiStream(findColumn(columnLabel));
   }
 
-  @Override
-  public InputStream getUnicodeStream(String columnLabel) throws SQLException {
-    return null;
+  @Override public InputStream getUnicodeStream(String columnLabel) throws SQLException {
+    return getUnicodeStream(findColumn(columnLabel));
   }
 
-  @Override
-  public InputStream getBinaryStream(String columnLabel) throws SQLException {
-    return null;
+  @Override public InputStream getBinaryStream(String columnLabel) throws SQLException {
+    return getBinaryStream(findColumn(columnLabel));
   }
 
   @Override public SQLWarning getWarnings() throws SQLException {
@@ -237,14 +220,13 @@ public class L4Rs implements ResultSet {
     return meta;
   }
 
-  @Override
-  public Object getObject(int columnIndex) throws SQLException {
-    return null;
+  @Override public Object getObject(int columnIndex) throws SQLException {
+    var targetJdbcType = meta.getColumnType(columnIndex);
+    return tryCast(columnIndex, targetJdbcType, 0);
   }
 
-  @Override
-  public Object getObject(String columnLabel) throws SQLException {
-    return null;
+  @Override public Object getObject(String columnLabel) throws SQLException {
+    return getObject(findColumn(columnLabel));
   }
 
   @Override public int findColumn(String columnLabel) throws SQLException {
@@ -261,24 +243,20 @@ public class L4Rs implements ResultSet {
     );
   }
 
-  @Override
-  public Reader getCharacterStream(int columnIndex) throws SQLException {
-    return null;
+  @Override public Reader getCharacterStream(int columnIndex) throws SQLException {
+    return (Reader) tryCast(columnIndex, CHARACTER_STREAM, 0);
   }
 
-  @Override
-  public Reader getCharacterStream(String columnLabel) throws SQLException {
-    return null;
+  @Override public Reader getCharacterStream(String columnLabel) throws SQLException {
+    return getCharacterStream(findColumn(columnLabel));
   }
 
-  @Override
-  public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-    return null;
+  @Override public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
+    return getBigDecimal(columnIndex, 0);
   }
 
-  @Override
-  public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
-    return null;
+  @Override public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
+    return getBigDecimal(findColumn(columnLabel));
   }
 
   @Override public boolean isBeforeFirst() throws SQLException {
@@ -465,19 +443,17 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public Ref getRef(int columnIndex) throws SQLException {
-    return null;
+  @Override public Ref getRef(int columnIndex) throws SQLException {
+    throw new SQLException("REF type not supported in SQLite", SqlStateFeatureNotSupported);
   }
 
-  @Override
-  public Blob getBlob(int columnIndex) throws SQLException {
-    return null;
+  @Override public Blob getBlob(int columnIndex) throws SQLException {
+    var bytes = (byte[]) tryCast(columnIndex, Types.BLOB, 0);
+    return bytes != null ? new SerialBlob(bytes) : null;
   }
 
-  @Override
-  public Clob getClob(int columnIndex) throws SQLException {
-    return null;
+  @Override public Clob getClob(int columnIndex) throws SQLException {
+    return (Clob) tryCast(columnIndex, CLOB_STREAM, 0);
   }
 
   @Override
@@ -495,14 +471,12 @@ public class L4Rs implements ResultSet {
     return null;
   }
 
-  @Override
-  public Blob getBlob(String columnLabel) throws SQLException {
-    return null;
+  @Override public Blob getBlob(String columnLabel) throws SQLException {
+    return getBlob(findColumn(columnLabel));
   }
 
-  @Override
-  public Clob getClob(String columnLabel) throws SQLException {
-    return null;
+  @Override public Clob getClob(String columnLabel) throws SQLException {
+    return getClob(findColumn(columnLabel));
   }
 
   @Override

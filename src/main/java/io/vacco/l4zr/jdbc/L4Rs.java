@@ -644,14 +644,21 @@ public class L4Rs implements ResultSet {
     return getObject(findColumn(columnLabel), type);
   }
 
-  @Override
-  public <T> T unwrap(Class<T> iface) throws SQLException {
-    return null;
+  @Override public <T> T unwrap(Class<T> iface) throws SQLException {
+    if (iface == null) {
+      throw new SQLException("Interface cannot be null");
+    }
+    if (iface == ResultSet.class || iface == Wrapper.class) {
+      return iface.cast(this);
+    }
+    throw new SQLException("Cannot unwrap to " + iface.getName());
   }
 
-  @Override
-  public boolean isWrapperFor(Class<?> iface) throws SQLException {
-    return false;
+  @Override public boolean isWrapperFor(Class<?> iface) throws SQLException {
+    if (iface == null) {
+      throw new SQLException("Interface cannot be null");
+    }
+    return iface == ResultSet.class || iface == Wrapper.class;
   }
 
 }

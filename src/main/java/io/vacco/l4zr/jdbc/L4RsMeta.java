@@ -112,11 +112,11 @@ public class L4RsMeta implements ResultSetMetaData {
 
   @Override public int getPrecision(int column) throws SQLException {
     checkColumn(column, result);
-    String type = result.types.get(column - 1);
+    var type = result.types.get(column - 1);
     if (type == null) {
       return 0; // Fallback for NULL or unknown types.
     }
-    String typeUpper = type.toUpperCase();
+    var typeUpper = type.toUpperCase();
     switch (typeUpper) {
       case RqInteger:
       case RqNumeric: return 19; // Max digits in 64-bit signed integer.

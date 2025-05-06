@@ -491,17 +491,6 @@ public class L4Jdbc {
       result = castBigDecimal(value, columnIndex, sourceJdbcType, -1);
     } else if (type == byte[].class && sourceJdbcType == BLOB) {
       result = castBlob(value, columnIndex, sourceJdbcType);
-    } else if (type == Date.class && (sourceJdbcType == VARCHAR || sourceJdbcType == DATE ||
-      sourceJdbcType == TIMESTAMP || sourceJdbcType == INTEGER)) {
-      result = castDate(value, columnIndex, sourceJdbcType, null);
-    } else if (type == Time.class && (sourceJdbcType == VARCHAR || sourceJdbcType == TIME ||
-      sourceJdbcType == TIMESTAMP || sourceJdbcType == INTEGER)) {
-      result = castTime(value, columnIndex, sourceJdbcType, null);
-    } else if (type == Timestamp.class && (sourceJdbcType == VARCHAR || sourceJdbcType == TIMESTAMP ||
-      sourceJdbcType == DATE || sourceJdbcType == INTEGER ||
-      sourceJdbcType == DOUBLE || sourceJdbcType == FLOAT ||
-      sourceJdbcType == NUMERIC)) {
-      result = castTimestamp(value, columnIndex, sourceJdbcType, null);
     } else {
       throw new SQLException(
         format("Cannot convert column %d (type %d) to %s", columnIndex, sourceJdbcType, type.getName()),

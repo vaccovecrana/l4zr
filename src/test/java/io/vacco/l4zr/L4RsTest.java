@@ -2,18 +2,18 @@ package io.vacco.l4zr;
 
 import io.vacco.l4zr.jdbc.*;
 import io.vacco.l4zr.rqlite.*;
+import j8spec.UnsafeBlock;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
+import javax.sql.rowset.serial.*;
 import java.awt.GraphicsEnvironment;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.Base64;
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -48,6 +48,15 @@ public class L4RsTest {
         sw.write(buffer, 0, len);
       }
       return sw.toString();
+    }
+  }
+
+  private static void runFail(UnsafeBlock action) {
+    try {
+      action.tryToExecute();
+      fail("Expected SQLException for unsupported operation");
+    } catch (Throwable e) {
+      assertTrue(e instanceof SQLException);
     }
   }
 
@@ -154,6 +163,30 @@ public class L4RsTest {
         var rs = new L4Rs(result, stmt);
 
         var meta = rs.getMetaData();
+
+        for (var col : result.columns) {
+          var idx = rs.findColumn(col);
+          System.out.printf(
+            "typename: %s, r: %s, w: %s, dw: %s%n",
+            meta.getColumnTypeName(idx), meta.isReadOnly(idx),
+            meta.isWritable(idx), meta.isDefinitelyWritable(idx)
+          );          System.out.printf(
+            "type: %d, displaySize: %d, class: %s, signed: %s, precision: %d%n",
+            meta.getColumnType(idx), meta.getColumnDisplaySize(idx),
+            meta.getColumnClassName(idx), meta.isSigned(idx), meta.getPrecision(idx)
+          );
+          assertFalse(meta.isAutoIncrement(idx));
+          assertFalse(meta.isCaseSensitive(idx));
+          assertTrue(meta.isSearchable(idx));
+          assertFalse(meta.isCurrency(idx));
+          assertEquals(ResultSetMetaData.columnNullableUnknown, meta.isNullable(idx));
+          assertEquals(col, meta.getColumnLabel(idx));
+          assertEquals(col, meta.getColumnName(idx));
+          assertTrue(meta.getSchemaName(idx).isEmpty());
+          assertTrue(meta.getTableName(idx).isEmpty());
+          assertTrue(meta.getCatalogName(idx).isEmpty());
+        }
+
         // Validate column types
         assertEquals(Types.INTEGER, meta.getColumnType(1)); // id (INTEGER)
         assertEquals(Types.NUMERIC, meta.getColumnType(2)); // num_val (NUMERIC)
@@ -324,6 +357,387 @@ public class L4RsTest {
         } catch (SQLException e) {
           assertEquals(L4Jdbc.SqlStateClosed, e.getSQLState());
         }
+      });
+
+      // New test block: Test ResultSet navigation and state
+      it("Tests L4Rs navigation and state methods", () -> {
+        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
+        var stmt = new L4Stm();
+        var res3 = rq.querySingle("SELECT * FROM test_data");
+        assertEquals(200, res3.statusCode);
+        var result = res3.results.get(0);
+        var rs = new L4Rs(result, stmt);
+
+        // Test initial state
+        assertTrue(rs.isBeforeFirst());
+        assertFalse(rs.isAfterLast());
+        assertFalse(rs.isFirst());
+        assertFalse(rs.isLast());
+        assertEquals(0, rs.getRow());
+
+        // Move to first row
+        assertTrue(rs.next());
+        assertFalse(rs.isBeforeFirst());
+        assertFalse(rs.isAfterLast());
+        assertTrue(rs.isFirst());
+        assertFalse(rs.isLast());
+        assertEquals(1, rs.getRow());
+
+        // Move to second row
+        assertTrue(rs.next());
+        assertFalse(rs.isBeforeFirst());
+        assertFalse(rs.isAfterLast());
+        assertFalse(rs.isFirst());
+        assertTrue(rs.isLast());
+        assertEquals(2, rs.getRow());
+
+        // Move past last row
+        assertFalse(rs.next());
+        assertFalse(rs.isBeforeFirst());
+        assertTrue(rs.isAfterLast());
+        assertFalse(rs.isFirst());
+        assertFalse(rs.isLast());
+        assertEquals(0, rs.getRow());
+
+        // Test closed state
+        rs.close();
+        assertTrue(rs.isClosed());
+        try {
+          rs.next();
+          fail("Expected SQLException for closed ResultSet");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateClosed, e.getSQLState());
+        }
+      });
+
+      it("Tests L4Rs unsupported operations and error handling", () -> {
+        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
+        var stmt = new L4Stm();
+        var res3 = rq.querySingle("SELECT * FROM test_data");
+        assertEquals(200, res3.statusCode);
+        var result = res3.results.get(0);
+        var rs = new L4Rs(result, stmt);
+
+        assertTrue(rs.next());
+
+        // Test unsupported navigation
+        try {
+          rs.beforeFirst();
+          fail("Expected SQLException for beforeFirst");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.afterLast();
+          fail("Expected SQLException for afterLast");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.first();
+          fail("Expected SQLException for first");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.last();
+          fail("Expected SQLException for last");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.absolute(1);
+          fail("Expected SQLException for absolute");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.relative(1);
+          fail("Expected SQLException for relative");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.previous();
+          fail("Expected SQLException for previous");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+
+        // Test fetch direction and size
+        rs.setFetchDirection(ResultSet.FETCH_FORWARD); // Should succeed
+        assertEquals(ResultSet.FETCH_FORWARD, rs.getFetchDirection());
+        try {
+          rs.setFetchDirection(ResultSet.FETCH_REVERSE);
+          fail("Expected SQLException for FETCH_REVERSE");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        rs.setFetchSize(10); // Should succeed
+        assertEquals(0, rs.getFetchSize()); // Always returns 0
+        try {
+          rs.setFetchSize(-1);
+          fail("Expected SQLException for negative fetch size");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateInvalidAttr, e.getSQLState());
+        }
+
+        // Test ResultSet type and concurrency
+        assertEquals(ResultSet.TYPE_FORWARD_ONLY, rs.getType());
+        assertEquals(ResultSet.CONCUR_READ_ONLY, rs.getConcurrency());
+
+        // Test row update/insert/delete
+        assertFalse(rs.rowUpdated());
+        assertFalse(rs.rowInserted());
+        assertFalse(rs.rowDeleted());
+        try {
+          rs.updateString("text_val", "Updated");
+          fail("Expected SQLException for updateString");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.insertRow();
+          fail("Expected SQLException for insertRow");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.deleteRow();
+          fail("Expected SQLException for deleteRow");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+
+        // Test unsupported types
+        try {
+          rs.getRef("id");
+          fail("Expected SQLException for getRef");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.getArray("text_val");
+          fail("Expected SQLException for getArray");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+        try {
+          rs.getRowId("id");
+          fail("Expected SQLException for getRowId");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+
+        // Test cursor name
+        try {
+          rs.getCursorName();
+          fail("Expected SQLException for getCursorName");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+        }
+
+        // Test warnings
+        assertNull(rs.getWarnings());
+        rs.clearWarnings(); // No-op, should not throw
+
+        // Test statement
+        assertEquals(stmt, rs.getStatement());
+
+        // Test unwrap
+        assertTrue(rs.isWrapperFor(ResultSet.class));
+        assertTrue(rs.isWrapperFor(Wrapper.class));
+        assertFalse(rs.isWrapperFor(String.class));
+        assertSame(rs, rs.unwrap(ResultSet.class));
+        try {
+          rs.unwrap(String.class);
+          fail("Expected SQLException for invalid unwrap");
+        } catch (SQLException e) {
+          assertNotNull(e.getMessage());
+        }
+
+        rs.close();
+      });
+
+      it("Tests L4Rs with empty ResultSet", () -> {
+        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
+        var stmt = new L4Stm();
+        var res = rq.querySingle("SELECT * FROM test_data WHERE id = 999");
+        assertEquals(200, res.statusCode);
+        var result = res.results.get(0);
+        var rs = new L4Rs(result, stmt);
+
+        // Test empty ResultSet
+        assertFalse(rs.isBeforeFirst());
+        assertFalse(rs.isAfterLast());
+        assertFalse(rs.isFirst());
+        assertFalse(rs.isLast());
+        assertEquals(0, rs.getRow());
+        assertFalse(rs.next());
+
+        // Test metadata
+        var meta = rs.getMetaData();
+        assertEquals(18, meta.getColumnCount());
+        assertEquals(Types.INTEGER, meta.getColumnType(1));
+
+        rs.close();
+        try {
+          rs.getInt("id");
+          fail("Expected SQLException for closed ResultSet");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateClosed, e.getSQLState());
+        }
+      });
+
+      it("Tests L4Rs with invalid column index and edge cases", () -> {
+        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
+        var stmt = new L4Stm();
+        var res3 = rq.querySingle("SELECT * FROM test_data");
+        assertEquals(200, res3.statusCode);
+        var result = res3.results.get(0);
+        var rs = new L4Rs(result, stmt);
+
+        assertTrue(rs.next());
+
+        // Test invalid column index
+        try {
+          rs.getString(0);
+          fail("Expected SQLException for invalid column index");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateInvalidColumn, e.getSQLState());
+        }
+        try {
+          rs.getString(19);
+          fail("Expected SQLException for invalid column index");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateInvalidColumn, e.getSQLState());
+        }
+
+        // Test invalid row access
+        rs.close();
+        try {
+          rs.getString(1);
+          fail("Expected SQLException for closed ResultSet");
+        } catch (SQLException e) {
+          assertEquals(L4Jdbc.SqlStateClosed, e.getSQLState());
+        }
+      });
+
+      it("Tests L4Rs updateXXX methods", () -> {
+        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
+        var stmt = new L4Stm();
+        var res3 = rq.querySingle("SELECT * FROM test_data");
+        assertEquals(200, res3.statusCode);
+        var result = res3.results.get(0);
+        var rs = new L4Rs(result, stmt);
+
+        assertTrue(rs.next());
+
+        // Test variables
+        int colIndex = 1;
+        var colLabel = "id";
+        var emptyStream = new ByteArrayInputStream(new byte[0]);
+        var emptyReader = new StringReader("");
+        var bytes = new byte[0];
+        var blob = new SerialBlob(bytes);
+        var clob = new SerialClob(new char[0]);
+
+        // Index-based updateXXX methods
+        runFail(() -> rs.updateNull(colIndex));
+        runFail(() -> rs.updateBoolean(colIndex, true));
+        runFail(() -> rs.updateByte(colIndex, (byte) 0));
+        runFail(() -> rs.updateShort(colIndex, (short) 0));
+        runFail(() -> rs.updateInt(colIndex, 0));
+        runFail(() -> rs.updateLong(colIndex, 0L));
+        runFail(() -> rs.updateFloat(colIndex, 0.0f));
+        runFail(() -> rs.updateDouble(colIndex, 0.0));
+        runFail(() -> rs.updateBigDecimal(colIndex, BigDecimal.ZERO));
+        runFail(() -> rs.updateString(colIndex, ""));
+        runFail(() -> rs.updateBytes(colIndex, bytes));
+        runFail(() -> rs.updateDate(colIndex, new Date(0)));
+        runFail(() -> rs.updateTime(colIndex, new Time(0)));
+        runFail(() -> rs.updateTimestamp(colIndex, new Timestamp(0)));
+        runFail(() -> rs.updateAsciiStream(colIndex, emptyStream, 0));
+        runFail(() -> rs.updateAsciiStream(colIndex, emptyStream, 0L));
+        runFail(() -> rs.updateAsciiStream(colIndex, emptyStream));
+        runFail(() -> rs.updateBinaryStream(colIndex, emptyStream, 0));
+        runFail(() -> rs.updateBinaryStream(colIndex, emptyStream, 0L));
+        runFail(() -> rs.updateBinaryStream(colIndex, emptyStream));
+        runFail(() -> rs.updateCharacterStream(colIndex, emptyReader, 0));
+        runFail(() -> rs.updateCharacterStream(colIndex, emptyReader, 0L));
+        runFail(() -> rs.updateCharacterStream(colIndex, emptyReader));
+        runFail(() -> rs.updateObject(colIndex, null, 0));
+        runFail(() -> rs.updateObject(colIndex, null));
+        runFail(() -> rs.updateRef(colIndex, null));
+        runFail(() -> rs.updateBlob(colIndex, blob));
+        runFail(() -> rs.updateBlob(colIndex, emptyStream, 0L));
+        runFail(() -> rs.updateBlob(colIndex, emptyStream));
+        runFail(() -> rs.updateClob(colIndex, clob));
+        runFail(() -> rs.updateClob(colIndex, emptyReader, 0L));
+        runFail(() -> rs.updateClob(colIndex, emptyReader));
+        runFail(() -> rs.updateArray(colIndex, null));
+        runFail(() -> rs.updateRowId(colIndex, null));
+        runFail(() -> rs.updateNString(colIndex, ""));
+        runFail(() -> rs.updateNClob(colIndex, (NClob) null));
+        runFail(() -> rs.updateNClob(colIndex, emptyReader, 0L));
+        runFail(() -> rs.updateNClob(colIndex, emptyReader));
+        runFail(() -> rs.updateSQLXML(colIndex, null));
+        runFail(() -> rs.updateNCharacterStream(colIndex, emptyReader, 0L));
+        runFail(() -> rs.updateNCharacterStream(colIndex, emptyReader));
+
+        // Label-based updateXXX methods
+        runFail(() -> rs.updateNull(colLabel));
+        runFail(() -> rs.updateBoolean(colLabel, true));
+        runFail(() -> rs.updateByte(colLabel, (byte) 0));
+        runFail(() -> rs.updateShort(colLabel, (short) 0));
+        runFail(() -> rs.updateInt(colLabel, 0));
+        runFail(() -> rs.updateLong(colLabel, 0L));
+        runFail(() -> rs.updateFloat(colLabel, 0.0f));
+        runFail(() -> rs.updateDouble(colLabel, 0.0));
+        runFail(() -> rs.updateBigDecimal(colLabel, BigDecimal.ZERO));
+        runFail(() -> rs.updateString(colLabel, ""));
+        runFail(() -> rs.updateBytes(colLabel, bytes));
+        runFail(() -> rs.updateDate(colLabel, new Date(0)));
+        runFail(() -> rs.updateTime(colLabel, new Time(0)));
+        runFail(() -> rs.updateTimestamp(colLabel, new Timestamp(0)));
+        runFail(() -> rs.updateAsciiStream(colLabel, emptyStream, 0));
+        runFail(() -> rs.updateAsciiStream(colLabel, emptyStream, 0L));
+        runFail(() -> rs.updateAsciiStream(colLabel, emptyStream));
+        runFail(() -> rs.updateBinaryStream(colLabel, emptyStream, 0));
+        runFail(() -> rs.updateBinaryStream(colLabel, emptyStream, 0L));
+        runFail(() -> rs.updateBinaryStream(colLabel, emptyStream));
+        runFail(() -> rs.updateCharacterStream(colLabel, emptyReader, 0));
+        runFail(() -> rs.updateCharacterStream(colLabel, emptyReader, 0L));
+        runFail(() -> rs.updateCharacterStream(colLabel, emptyReader));
+        runFail(() -> rs.updateObject(colLabel, null, 0));
+        runFail(() -> rs.updateObject(colLabel, null));
+        runFail(() -> rs.updateRef(colLabel, null));
+        runFail(() -> rs.updateBlob(colLabel, blob));
+        runFail(() -> rs.updateBlob(colLabel, emptyStream, 0L));
+        runFail(() -> rs.updateBlob(colLabel, emptyStream));
+        runFail(() -> rs.updateClob(colLabel, clob));
+        runFail(() -> rs.updateClob(colLabel, emptyReader, 0L));
+        runFail(() -> rs.updateClob(colLabel, emptyReader));
+        runFail(() -> rs.updateArray(colLabel, null));
+        runFail(() -> rs.updateRowId(colLabel, null));
+        runFail(() -> rs.updateNString(colLabel, ""));
+        runFail(() -> rs.updateNClob(colLabel, (NClob) null));
+        runFail(() -> rs.updateNClob(colLabel, emptyReader, 0L));
+        runFail(() -> rs.updateNClob(colLabel, emptyReader));
+        runFail(() -> rs.updateSQLXML(colLabel, null));
+        runFail(() -> rs.updateNCharacterStream(colLabel, emptyReader, 0L));
+        runFail(() -> rs.updateNCharacterStream(colLabel, emptyReader));
+
+        // Test row-level operations
+        runFail(rs::insertRow);
+        runFail(rs::updateRow);
+        runFail(rs::deleteRow);
+        runFail(rs::refreshRow);
+        runFail(rs::cancelRowUpdates);
+        runFail(rs::moveToInsertRow);
+        runFail(rs::moveToCurrentRow);
+
+        rs.close();
       });
     }
   }

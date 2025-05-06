@@ -488,7 +488,7 @@ public class L4Jdbc {
       sourceJdbcType == NUMERIC || sourceJdbcType == BOOLEAN ||
       sourceJdbcType == TINYINT || sourceJdbcType == SMALLINT ||
       sourceJdbcType == BIGINT)) {
-      result = castBigDecimal(value, columnIndex, sourceJdbcType, 0);
+      result = castBigDecimal(value, columnIndex, sourceJdbcType, -1);
     } else if (type == byte[].class && sourceJdbcType == BLOB) {
       result = castBlob(value, columnIndex, sourceJdbcType);
     } else if (type == Date.class && (sourceJdbcType == VARCHAR || sourceJdbcType == DATE ||

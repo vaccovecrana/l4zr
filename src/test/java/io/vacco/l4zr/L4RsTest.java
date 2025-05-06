@@ -64,7 +64,7 @@ public class L4RsTest {
     if (!GraphicsEnvironment.isHeadless()) {
       it("Validates L4Rs against a live rqlite instance", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Stm();
+        var stmt = new L4Ps(rq);
 
         var dr = rq.executeSingle("DROP TABLE test_data");
         assertEquals(200, dr.statusCode);
@@ -362,7 +362,7 @@ public class L4RsTest {
       // New test block: Test ResultSet navigation and state
       it("Tests L4Rs navigation and state methods", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Stm();
+        var stmt = new L4Ps(rq);
         var res3 = rq.querySingle("SELECT * FROM test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
@@ -412,7 +412,7 @@ public class L4RsTest {
 
       it("Tests L4Rs unsupported operations and error handling", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Stm();
+        var stmt = new L4Ps(rq);
         var res3 = rq.querySingle("SELECT * FROM test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
@@ -561,7 +561,7 @@ public class L4RsTest {
 
       it("Tests L4Rs with empty ResultSet", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Stm();
+        var stmt = new L4Ps(rq);
         var res = rq.querySingle("SELECT * FROM test_data WHERE id = 999");
         assertEquals(200, res.statusCode);
         var result = res.results.get(0);
@@ -591,7 +591,7 @@ public class L4RsTest {
 
       it("Tests L4Rs with invalid column index and edge cases", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Stm();
+        var stmt = new L4Ps(rq);
         var res3 = rq.querySingle("SELECT * FROM test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
@@ -625,7 +625,7 @@ public class L4RsTest {
 
       it("Tests L4Rs updateXXX methods", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Stm();
+        var stmt = new L4Ps(rq);
         var res3 = rq.querySingle("SELECT * FROM test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);

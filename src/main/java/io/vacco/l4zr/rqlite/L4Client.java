@@ -44,7 +44,8 @@ public class L4Client {
     if (resp.statusCode() != 200) {
       throw new IOException("Unexpected status code: " + resp.statusCode() + ", body: " + resp.body());
     }
-    var node = Json.parse(resp.body()).asObject();
+    var rb = resp.body();
+    var node = Json.parse(rb).asObject();
     return new L4Response(resp.statusCode(), node);
   }
 
@@ -57,7 +58,8 @@ public class L4Client {
     var body = L4Statement.toArray(statements).toString();
     var queryParams = L4Options.queryParams();
     var resp = doJSONPostRequest(queryURL + queryParams, body);
-    var node = Json.parse(resp.body()).asObject();
+    var rb = resp.body();
+    var node = Json.parse(rb).asObject();
     return new L4Response(resp.statusCode(), node);
   }
 

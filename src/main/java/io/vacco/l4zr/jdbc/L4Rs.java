@@ -58,7 +58,7 @@ public class L4Rs implements ResultSet {
     checkRow(currentRow, result, isClosed);
     checkColumn(columnIndex, result);
     var value = result.values.get(currentRow).get(columnIndex - 1);
-    wasNull = (value == null);
+    wasNull = (value == null || value.equals("null"));
     if (wasNull) {
       return null; // getXXX will handle primitive defaults
     }
@@ -264,7 +264,7 @@ public class L4Rs implements ResultSet {
   }
 
   @Override public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-    return getBigDecimal(columnIndex, 0);
+    return getBigDecimal(columnIndex, -1);
   }
 
   @Override public BigDecimal getBigDecimal(String columnLabel) throws SQLException {

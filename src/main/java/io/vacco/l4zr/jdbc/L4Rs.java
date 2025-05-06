@@ -60,7 +60,7 @@ public class L4Rs implements ResultSet {
     var value = result.values.get(currentRow).get(columnIndex - 1);
     wasNull = (value == null || value.equals("null"));
     if (wasNull) {
-      return null; // getXXX will handle primitive defaults
+      return null;
     }
     int sourceJdbcType = meta.getColumnType(columnIndex);
     return convertValue(value, sourceJdbcType, targetJdbcType, columnIndex, scale, cal, type);

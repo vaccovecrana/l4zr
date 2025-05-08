@@ -3,8 +3,6 @@ package io.vacco.l4zr.rqlite;
 import io.vacco.l4zr.json.*;
 import java.util.*;
 
-import static io.vacco.l4zr.rqlite.L4Json.*;
-
 public class L4Statement {
 
   private String sql;
@@ -20,26 +18,44 @@ public class L4Statement {
     throw new IllegalStateException("Cannot mix positional and named parameters in the same statement");
   }
 
-  public L4Statement withPositionalParam(Object param) {
+  private void checkPositionalParams() {
+    if (!positionalParams.isEmpty()) {
+      badParams();
+    }
+  }
+
+  private void checkNamedParams() {
     if (namedParams != null && !namedParams.isEmpty()) {
       badParams();
     }
-    this.positionalParams.add(param);
+  }
+
+  public L4Statement withPositionalParam(int paramIndex, Object param) {
+    checkNamedParams();
+    if (paramIndex < 0) {
+      throw new IllegalArgumentException("Parameter index must be non-negative: " + paramIndex);
+    }
+    while (positionalParams.size() <= paramIndex) {
+      positionalParams.add(null);
+    }
+    positionalParams.set(paramIndex, param);
     return this;
   }
 
-  public L4Statement withPositionalParams(Object ... params) {
-    if (namedParams != null && !namedParams.isEmpty()) {
-      badParams();
-    }
-    this.positionalParams = Arrays.asList(params);
+  public L4Statement withPositionalParam(Object param) {
+    checkNamedParams();
+    positionalParams.add(param);
+    return this;
+  }
+
+  public L4Statement withPositionalParams(Object... params) {
+    checkNamedParams();
+    this.positionalParams = new ArrayList<>(Arrays.asList(params));
     return this;
   }
 
   public L4Statement withNamedParam(String name, Object value) {
-    if (!positionalParams.isEmpty()) {
-      badParams();
-    }
+    checkPositionalParams();
     if (this.namedParams == null) {
       this.namedParams = new LinkedHashMap<>();
     }
@@ -48,9 +64,7 @@ public class L4Statement {
   }
 
   public L4Statement withNamedParams(Map<String, Object> params) {
-    if (!positionalParams.isEmpty()) {
-      badParams();
-    }
+    checkPositionalParams();
     this.namedParams = new LinkedHashMap<>(params);
     return this;
   }
@@ -64,18 +78,18 @@ public class L4Statement {
     if (namedParams != null && !namedParams.isEmpty()) {
       var paramsObject = new JsonObject();
       for (var entry : namedParams.entrySet()) {
-        paramsObject.add(entry.getKey(), toJsonValue(entry.getValue()));
+        paramsObject.add(entry.getKey(), L4Json.toJsonValue(entry.getValue()));
       }
       out.add(paramsObject);
     } else if (!positionalParams.isEmpty()) {
       for (var param : positionalParams) {
-        out.add(toJsonValue(param));
+        out.add(L4Json.toJsonValue(param));
       }
     }
     return out;
   }
 
-  public static JsonValue toArray(L4Statement ... statements) {
+  public static JsonValue toArray(L4Statement... statements) {
     var smtList = Json.array();
     for (var smt : statements) {
       smtList.add(smt.build());

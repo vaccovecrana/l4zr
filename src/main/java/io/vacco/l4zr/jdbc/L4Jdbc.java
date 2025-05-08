@@ -18,45 +18,54 @@ import static java.lang.String.format;
 
 public class L4Jdbc {
 
-  public static final int VARCHAR_STREAM = Types.VARCHAR + 1000; // Custom type to distinguish stream
-  public static final int UNICODE_STREAM = Types.VARCHAR + 1001; // Custom type for deprecated Unicode stream
-  public static final int BINARY_STREAM = Types.BLOB + 1000;     // Custom type for binary stream
-  public static final int CHARACTER_STREAM = Types.VARCHAR + 1002;
-  public static final int CLOB_STREAM = Types.VARCHAR + 1003;
-  public static final int OBJECT_STREAM = Types.OTHER + 1000;
-  public static final int URL_STREAM = Types.DATALINK + 1000;
-  public static final int NCLOB_STREAM = Types.NCLOB + 1000;
+  public static final int VARCHAR_STREAM    = Types.VARCHAR + 1000; // Custom type to distinguish stream
+  public static final int UNICODE_STREAM    = Types.VARCHAR + 1001; // Custom type for deprecated Unicode stream
+  public static final int BINARY_STREAM     = Types.BLOB + 1000;     // Custom type for binary stream
+  public static final int CHARACTER_STREAM  = Types.VARCHAR + 1002;
+  public static final int CLOB_STREAM       = Types.VARCHAR + 1003;
+  public static final int OBJECT_STREAM     = Types.OTHER + 1000;
+  public static final int URL_STREAM        = Types.DATALINK + 1000;
+  public static final int NCLOB_STREAM      = Types.NCLOB + 1000;
   public static final int NCHARACTER_STREAM = Types.NVARCHAR + 1000;
 
   // constants for rqlite types
-  public static final String RQ_INTEGER = "INTEGER";
-  public static final String RQ_NUMERIC = "NUMERIC";
-  public static final String RQ_BOOLEAN = "BOOLEAN";
-  public static final String RQ_TINYINT = "TINYINT";
-  public static final String RQ_SMALLINT = "SMALLINT";
-  public static final String RQ_BIGINT = "BIGINT";
-  public static final String RQ_FLOAT = "FLOAT";
-  public static final String RQ_DOUBLE = "DOUBLE";
-  public static final String RQ_VARCHAR = "VARCHAR";
-  public static final String RQ_DATE = "DATE";
-  public static final String RQ_TIME = "TIME";
+  public static final String RQ_INTEGER   = "INTEGER";
+  public static final String RQ_NUMERIC   = "NUMERIC";
+  public static final String RQ_BOOLEAN   = "BOOLEAN";
+  public static final String RQ_TINYINT   = "TINYINT";
+  public static final String RQ_SMALLINT  = "SMALLINT";
+  public static final String RQ_BIGINT    = "BIGINT";
+  public static final String RQ_FLOAT     = "FLOAT";
+  public static final String RQ_DOUBLE    = "DOUBLE";
+  public static final String RQ_VARCHAR   = "VARCHAR";
+  public static final String RQ_DATE      = "DATE";
+  public static final String RQ_TIME      = "TIME";
   public static final String RQ_TIMESTAMP = "TIMESTAMP";
-  public static final String RQ_DATALINK = "DATALINK";
-  public static final String RQ_CLOB = "CLOB";
-  public static final String RQ_NCLOB = "NCLOB";
-  public static final String RQ_NVARCHAR = "NVARCHAR";
-  public static final String RQ_BLOB = "BLOB";
-  public static final String RQ_NULL = "NULL";
+  public static final String RQ_DATALINK  = "DATALINK";
+  public static final String RQ_CLOB      = "CLOB";
+  public static final String RQ_NCLOB     = "NCLOB";
+  public static final String RQ_NVARCHAR  = "NVARCHAR";
+  public static final String RQ_BLOB      = "BLOB";
+  public static final String RQ_NULL      = "NULL";
 
   public static final String
-    SqlStateInvalidParam = "22003",
-    SqlStateInvalidConversion = "22018",
-    SqlStateClosed = "HY000",
-    SqlStateInvalidColumn = "22003",
-    SqlStateInvalidCursor = "24000",
+    SqlStateInvalidParam        = "22003",
+    SqlStateInvalidConversion   = "22018",
+    SqlStateClosed              = "HY000",
+    SqlStateInvalidColumn       = "22003",
+    SqlStateInvalidCursor       = "24000",
     SqlStateFeatureNotSupported = "0A000",
-    SqlStateInvalidAttr = "HY092",
-    SqlStateInvalidType = "22005";;
+    SqlStateInvalidAttr         = "HY092",
+    SqlStateInvalidType         = "22005";
+
+  public static boolean anyOf(int sourceType, int ... types) {
+    for (var t : types) {
+      if (sourceType == t) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   public static void checkColumn(int idx, L4Result result) throws SQLException {
     if (idx < 1 || idx > result.columns.size()) {
@@ -97,7 +106,7 @@ public class L4Jdbc {
   }
 
   public static boolean castBoolean(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == INTEGER || sourceJdbcType == NUMERIC) {
+    if (anyOf(sourceJdbcType, INTEGER, NUMERIC)) {
       try {
         var longVal = Long.parseLong(value);
         if (longVal == 0 || longVal == 1) {
@@ -110,7 +119,7 @@ public class L4Jdbc {
           SqlStateInvalidType, e
         );
       }
-    } else if (sourceJdbcType == VARCHAR || sourceJdbcType == BOOLEAN) {
+    } else if (anyOf(sourceJdbcType, VARCHAR, BOOLEAN)) {
       return Boolean.parseBoolean(value);
     }
     castError(value, columnIndex, sourceJdbcType, BOOLEAN);
@@ -118,8 +127,7 @@ public class L4Jdbc {
   }
 
   public static int castInteger(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == INTEGER || sourceJdbcType == TINYINT || sourceJdbcType == SMALLINT ||
-      sourceJdbcType == BOOLEAN || sourceJdbcType == NUMERIC) {
+    if (anyOf(sourceJdbcType, INTEGER, TINYINT, SMALLINT, BOOLEAN, NUMERIC)) {
       try {
         var longVal = Long.parseLong(value);
         if (longVal >= Integer.MIN_VALUE && longVal <= Integer.MAX_VALUE) {
@@ -138,8 +146,7 @@ public class L4Jdbc {
   }
 
   public static long castLong(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == INTEGER || sourceJdbcType == BIGINT || sourceJdbcType == TINYINT ||
-      sourceJdbcType == SMALLINT || sourceJdbcType == BOOLEAN || sourceJdbcType == NUMERIC) {
+    if (anyOf(sourceJdbcType, INTEGER, BIGINT, TINYINT, SMALLINT, BOOLEAN, NUMERIC)) {
       try {
         return Long.parseLong(value);
       } catch (NumberFormatException e) {
@@ -154,7 +161,7 @@ public class L4Jdbc {
   }
 
   public static float castFloat(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == FLOAT || sourceJdbcType == DOUBLE || sourceJdbcType == NUMERIC) {
+    if (anyOf(sourceJdbcType, FLOAT, DOUBLE, NUMERIC)) {
       try {
         return Float.parseFloat(value);
       } catch (NumberFormatException e) {
@@ -169,7 +176,7 @@ public class L4Jdbc {
   }
 
   public static double castDouble(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == FLOAT || sourceJdbcType == DOUBLE || sourceJdbcType == NUMERIC) {
+    if (anyOf(sourceJdbcType, FLOAT, DOUBLE, NUMERIC)) {
       try {
         return Double.parseDouble(value);
       } catch (NumberFormatException e) {
@@ -184,8 +191,7 @@ public class L4Jdbc {
   }
 
   public static byte castByte(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == INTEGER || sourceJdbcType == TINYINT || sourceJdbcType == BOOLEAN ||
-      sourceJdbcType == NUMERIC) {
+    if (anyOf(sourceJdbcType,  INTEGER, TINYINT, BOOLEAN, NUMERIC)) {
       try {
         var longVal = Long.parseLong(value);
         if (longVal >= Byte.MIN_VALUE && longVal <= Byte.MAX_VALUE) {
@@ -204,8 +210,7 @@ public class L4Jdbc {
   }
 
   public static short castShort(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == INTEGER || sourceJdbcType == TINYINT || sourceJdbcType == SMALLINT ||
-      sourceJdbcType == BOOLEAN || sourceJdbcType == NUMERIC) {
+    if (anyOf(sourceJdbcType, INTEGER, TINYINT, SMALLINT, BOOLEAN, NUMERIC)) {
       try {
         var longVal = Long.parseLong(value);
         if (longVal >= Short.MIN_VALUE && longVal <= Short.MAX_VALUE) {
@@ -224,9 +229,7 @@ public class L4Jdbc {
   }
 
   public static BigDecimal castBigDecimal(String value, int columnIndex, int sourceJdbcType, int scale) throws SQLException {
-    if (sourceJdbcType == INTEGER || sourceJdbcType == FLOAT || sourceJdbcType == DOUBLE ||
-      sourceJdbcType == VARCHAR || sourceJdbcType == NUMERIC || sourceJdbcType == BOOLEAN ||
-      sourceJdbcType == TINYINT || sourceJdbcType == SMALLINT || sourceJdbcType == BIGINT) {
+    if (anyOf(sourceJdbcType, INTEGER, FLOAT, DOUBLE, VARCHAR, NUMERIC, BOOLEAN, TINYINT, SMALLINT, BIGINT)) {
       try {
         var bd = new BigDecimal(value);
         if (scale != -1) {
@@ -245,9 +248,7 @@ public class L4Jdbc {
   }
 
   public static InputStream castAsciiStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == CLOB || sourceJdbcType == NCLOB ||
-      sourceJdbcType == NVARCHAR || sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE ||
-      sourceJdbcType == NUMERIC || sourceJdbcType == BOOLEAN) {
+    if (anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR, INTEGER, DOUBLE, NUMERIC, BOOLEAN)) {
       var asciiBytes = value.getBytes(StandardCharsets.US_ASCII); // Convert non-ASCII to '?'
       return new ByteArrayInputStream(asciiBytes);
     }
@@ -256,9 +257,7 @@ public class L4Jdbc {
   }
 
   public static InputStream castUnicodeStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == CLOB || sourceJdbcType == NCLOB ||
-      sourceJdbcType == NVARCHAR || sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE ||
-      sourceJdbcType == NUMERIC || sourceJdbcType == BOOLEAN) {
+    if (anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR, INTEGER, DOUBLE, NUMERIC, BOOLEAN)) {
       var unicodeBytes = value.getBytes(StandardCharsets.UTF_16BE); // Encode as UTF-16BE
       return new ByteArrayInputStream(unicodeBytes);
     }
@@ -277,9 +276,7 @@ public class L4Jdbc {
           SqlStateInvalidType, e
         );
       }
-    } else if (sourceJdbcType == VARCHAR || sourceJdbcType == CLOB || sourceJdbcType == NCLOB ||
-      sourceJdbcType == NVARCHAR || sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE ||
-      sourceJdbcType == NUMERIC || sourceJdbcType == BOOLEAN) {
+    } else if (anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR, INTEGER, DOUBLE, NUMERIC, BOOLEAN)) {
       return new ByteArrayInputStream(value.getBytes(StandardCharsets.UTF_8)); // Encode as UTF-8
     }
     castError(value, columnIndex, sourceJdbcType, BINARY_STREAM);
@@ -287,9 +284,7 @@ public class L4Jdbc {
   }
 
   public static Reader castCharacterStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == CLOB || sourceJdbcType == NCLOB ||
-      sourceJdbcType == NVARCHAR || sourceJdbcType == INTEGER || sourceJdbcType == DOUBLE ||
-      sourceJdbcType == NUMERIC || sourceJdbcType == BOOLEAN) {
+    if (anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR, INTEGER, DOUBLE, NUMERIC, BOOLEAN)) {
       return new StringReader(value);
     }
     castError(value, columnIndex, sourceJdbcType, CHARACTER_STREAM);
@@ -312,8 +307,7 @@ public class L4Jdbc {
   }
 
   public static Clob castClob(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == CLOB || sourceJdbcType == NCLOB ||
-      sourceJdbcType == NVARCHAR) {
+    if (anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR)) {
       return new SerialClob(value.toCharArray());
     }
     castError(value, columnIndex, sourceJdbcType, CLOB);
@@ -321,7 +315,7 @@ public class L4Jdbc {
   }
 
   public static Date castDate(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == DATE || sourceJdbcType == TIMESTAMP) {
+    if (anyOf(sourceJdbcType, VARCHAR, DATE, TIMESTAMP)) {
       try {
         // Try parsing as ISO timestamp (e.g., "2023-10-15T00:00:00Z")
         try {
@@ -358,7 +352,7 @@ public class L4Jdbc {
   }
 
   public static Time castTime(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == TIME || sourceJdbcType == TIMESTAMP) {
+    if (anyOf(sourceJdbcType, VARCHAR, TIME, TIMESTAMP)) {
       try {
         var localTime = LocalTime.parse(value, DateTimeFormatter.ISO_LOCAL_TIME);
         var calendar = cal != null ? cal : Calendar.getInstance();
@@ -387,7 +381,7 @@ public class L4Jdbc {
   }
 
   public static Timestamp castTimestamp(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == TIMESTAMP || sourceJdbcType == DATE) {
+    if (anyOf(sourceJdbcType, VARCHAR, TIMESTAMP, DATE)) {
       try {
         // Try parsing as ISO timestamp (e.g., "2023-10-15T14:30:00Z")
         try {
@@ -422,7 +416,7 @@ public class L4Jdbc {
   }
 
   public static URL castURL(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == DATALINK) {
+    if (anyOf(sourceJdbcType, VARCHAR, DATALINK)) {
       try {
         return new URL(value);
       } catch (MalformedURLException e) {
@@ -437,8 +431,7 @@ public class L4Jdbc {
   }
 
   public static NClob castNClob(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == NCLOB || sourceJdbcType == NVARCHAR ||
-      sourceJdbcType == CLOB) {
+    if (anyOf(sourceJdbcType, VARCHAR, NCLOB, NVARCHAR, CLOB)) {
       return new L4NClob(value.toCharArray());
     }
     castError(value, columnIndex, sourceJdbcType, NCLOB);
@@ -446,8 +439,7 @@ public class L4Jdbc {
   }
 
   public static Reader castNCharacterStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
-    if (sourceJdbcType == VARCHAR || sourceJdbcType == NVARCHAR || sourceJdbcType == CLOB ||
-      sourceJdbcType == NCLOB) {
+    if (anyOf(sourceJdbcType, VARCHAR, NVARCHAR, CLOB, NCLOB)) {
       return new StringReader(value);
     }
     castError(value, columnIndex, sourceJdbcType, NCHARACTER_STREAM);
@@ -459,35 +451,21 @@ public class L4Jdbc {
       throw new SQLException("Target type cannot be null for column " + columnIndex, SqlStateInvalidType);
     }
     Object result;
-    if (type == String.class && (sourceJdbcType == VARCHAR || sourceJdbcType == CLOB ||
-      sourceJdbcType == NCLOB || sourceJdbcType == NVARCHAR)) {
+    if (type == String.class && anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR)) {
       result = value;
-    } else if (type == Integer.class && (sourceJdbcType == INTEGER || sourceJdbcType == TINYINT ||
-      sourceJdbcType == SMALLINT || sourceJdbcType == BOOLEAN ||
-      sourceJdbcType == NUMERIC)) {
+    } else if (type == Integer.class && anyOf(sourceJdbcType, INTEGER, TINYINT, SMALLINT, BOOLEAN, NUMERIC)) {
       result = castInteger(value, columnIndex, sourceJdbcType);
-    } else if (type == Long.class && (sourceJdbcType == INTEGER || sourceJdbcType == BIGINT ||
-      sourceJdbcType == TINYINT || sourceJdbcType == SMALLINT ||
-      sourceJdbcType == BOOLEAN || sourceJdbcType == NUMERIC)) {
+    } else if (type == Long.class && anyOf(sourceJdbcType, INTEGER, BIGINT, TINYINT, SMALLINT, BOOLEAN, NUMERIC)) {
       result = castLong(value, columnIndex, sourceJdbcType);
-    } else if (type == Float.class && (sourceJdbcType == FLOAT || sourceJdbcType == DOUBLE ||
-      sourceJdbcType == NUMERIC)) {
+    } else if (type == Float.class && anyOf(sourceJdbcType, FLOAT, DOUBLE, NUMERIC)) {
       result = castFloat(value, columnIndex, sourceJdbcType);
-    } else if (type == Double.class && (sourceJdbcType == FLOAT || sourceJdbcType == DOUBLE ||
-      sourceJdbcType == NUMERIC)) {
+    } else if (type == Double.class && anyOf(sourceJdbcType, FLOAT, DOUBLE, NUMERIC)) {
       result = castDouble(value, columnIndex, sourceJdbcType);
-    } else if (type == Byte.class && (sourceJdbcType == INTEGER || sourceJdbcType == TINYINT ||
-      sourceJdbcType == BOOLEAN || sourceJdbcType == NUMERIC)) {
+    } else if (type == Byte.class && anyOf(sourceJdbcType, INTEGER, TINYINT, BOOLEAN, NUMERIC)) {
       result = castByte(value, columnIndex, sourceJdbcType);
-    } else if (type == Short.class && (sourceJdbcType == INTEGER || sourceJdbcType == TINYINT ||
-      sourceJdbcType == SMALLINT || sourceJdbcType == BOOLEAN ||
-      sourceJdbcType == NUMERIC)) {
+    } else if (type == Short.class && anyOf(sourceJdbcType, INTEGER, TINYINT, SMALLINT, BOOLEAN, NUMERIC)) {
       result = castShort(value, columnIndex, sourceJdbcType);
-    } else if (type == BigDecimal.class && (sourceJdbcType == INTEGER || sourceJdbcType == FLOAT ||
-      sourceJdbcType == DOUBLE || sourceJdbcType == VARCHAR ||
-      sourceJdbcType == NUMERIC || sourceJdbcType == BOOLEAN ||
-      sourceJdbcType == TINYINT || sourceJdbcType == SMALLINT ||
-      sourceJdbcType == BIGINT)) {
+    } else if (type == BigDecimal.class && anyOf(sourceJdbcType, INTEGER, FLOAT, DOUBLE, VARCHAR, NUMERIC, BOOLEAN, TINYINT, SMALLINT, BIGINT)) {
       result = castBigDecimal(value, columnIndex, sourceJdbcType, -1);
     } else if (type == byte[].class && sourceJdbcType == BLOB) {
       result = castBlob(value, columnIndex, sourceJdbcType);

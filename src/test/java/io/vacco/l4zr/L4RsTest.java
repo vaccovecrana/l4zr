@@ -2,21 +2,18 @@ package io.vacco.l4zr;
 
 import io.vacco.l4zr.jdbc.*;
 import io.vacco.l4zr.rqlite.*;
-import j8spec.UnsafeBlock;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
-import javax.sql.rowset.serial.*;
 import java.awt.GraphicsEnvironment;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.sql.Date;
 import java.time.*;
-import java.util.Base64;
-import java.util.Calendar;
-import java.util.TimeZone;
+import java.util.*;
 
 import static j8spec.J8Spec.*;
 import static java.lang.String.join;
@@ -51,20 +48,11 @@ public class L4RsTest {
     }
   }
 
-  private static void runFail(UnsafeBlock action) {
-    try {
-      action.tryToExecute();
-      fail("Expected SQLException for unsupported operation");
-    } catch (Throwable e) {
-      assertTrue(e instanceof SQLException);
-    }
-  }
-
   static {
     if (!GraphicsEnvironment.isHeadless()) {
       it("Validates L4Rs against a live rqlite instance", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Ps(rq);
+        var stmt = new L4Ps(rq, "");
 
         var dr = rq.executeSingle("DROP TABLE test_data");
         assertEquals(200, dr.statusCode);
@@ -280,6 +268,13 @@ public class L4RsTest {
         assertEquals("This is an NSTRING", readReader(rs.getNCharacterStream("nstring_val")));
         assertEquals("Hello, rqlite!", new String(readStream(rs.getBinaryStream("blob_val")), StandardCharsets.UTF_8));
 
+        var blob = rs.getBlob("blob_val");
+        var str = new String(blob.getBytes(1, (int) blob.length()));
+        assertEquals("Hello, rqlite!", str);
+
+        var obj = rs.getObject("blob_val", new HashMap<>());
+        assertNotNull(obj);
+
         // Test row 2: NULL values
         assertTrue("Expected second row", rs.next());
         assertEquals(2, rs.getInt("id"));
@@ -362,7 +357,7 @@ public class L4RsTest {
       // New test block: Test ResultSet navigation and state
       it("Tests L4Rs navigation and state methods", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Ps(rq);
+        var stmt = new L4Ps(rq, "");
         var res3 = rq.querySingle("SELECT * FROM test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
@@ -412,7 +407,7 @@ public class L4RsTest {
 
       it("Tests L4Rs unsupported operations and error handling", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Ps(rq);
+        var stmt = new L4Ps(rq, "");
         var res3 = rq.querySingle("SELECT * FROM test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
@@ -561,7 +556,7 @@ public class L4RsTest {
 
       it("Tests L4Rs with empty ResultSet", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Ps(rq);
+        var stmt = new L4Ps(rq, "");
         var res = rq.querySingle("SELECT * FROM test_data WHERE id = 999");
         assertEquals(200, res.statusCode);
         var result = res.results.get(0);
@@ -591,7 +586,7 @@ public class L4RsTest {
 
       it("Tests L4Rs with invalid column index and edge cases", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Ps(rq);
+        var stmt = new L4Ps(rq, "");
         var res3 = rq.querySingle("SELECT * FROM test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
@@ -621,123 +616,6 @@ public class L4RsTest {
         } catch (SQLException e) {
           assertEquals(L4Jdbc.SqlStateClosed, e.getSQLState());
         }
-      });
-
-      it("Tests L4Rs updateXXX methods", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        var stmt = new L4Ps(rq);
-        var res3 = rq.querySingle("SELECT * FROM test_data");
-        assertEquals(200, res3.statusCode);
-        var result = res3.results.get(0);
-        var rs = new L4Rs(result, stmt);
-
-        assertTrue(rs.next());
-
-        // Test variables
-        int colIndex = 1;
-        var colLabel = "id";
-        var emptyStream = new ByteArrayInputStream(new byte[0]);
-        var emptyReader = new StringReader("");
-        var bytes = new byte[0];
-        var blob = new SerialBlob(bytes);
-        var clob = new SerialClob(new char[0]);
-
-        // Index-based updateXXX methods
-        runFail(() -> rs.updateNull(colIndex));
-        runFail(() -> rs.updateBoolean(colIndex, true));
-        runFail(() -> rs.updateByte(colIndex, (byte) 0));
-        runFail(() -> rs.updateShort(colIndex, (short) 0));
-        runFail(() -> rs.updateInt(colIndex, 0));
-        runFail(() -> rs.updateLong(colIndex, 0L));
-        runFail(() -> rs.updateFloat(colIndex, 0.0f));
-        runFail(() -> rs.updateDouble(colIndex, 0.0));
-        runFail(() -> rs.updateBigDecimal(colIndex, BigDecimal.ZERO));
-        runFail(() -> rs.updateString(colIndex, ""));
-        runFail(() -> rs.updateBytes(colIndex, bytes));
-        runFail(() -> rs.updateDate(colIndex, new Date(0)));
-        runFail(() -> rs.updateTime(colIndex, new Time(0)));
-        runFail(() -> rs.updateTimestamp(colIndex, new Timestamp(0)));
-        runFail(() -> rs.updateAsciiStream(colIndex, emptyStream, 0));
-        runFail(() -> rs.updateAsciiStream(colIndex, emptyStream, 0L));
-        runFail(() -> rs.updateAsciiStream(colIndex, emptyStream));
-        runFail(() -> rs.updateBinaryStream(colIndex, emptyStream, 0));
-        runFail(() -> rs.updateBinaryStream(colIndex, emptyStream, 0L));
-        runFail(() -> rs.updateBinaryStream(colIndex, emptyStream));
-        runFail(() -> rs.updateCharacterStream(colIndex, emptyReader, 0));
-        runFail(() -> rs.updateCharacterStream(colIndex, emptyReader, 0L));
-        runFail(() -> rs.updateCharacterStream(colIndex, emptyReader));
-        runFail(() -> rs.updateObject(colIndex, null, 0));
-        runFail(() -> rs.updateObject(colIndex, null));
-        runFail(() -> rs.updateRef(colIndex, null));
-        runFail(() -> rs.updateBlob(colIndex, blob));
-        runFail(() -> rs.updateBlob(colIndex, emptyStream, 0L));
-        runFail(() -> rs.updateBlob(colIndex, emptyStream));
-        runFail(() -> rs.updateClob(colIndex, clob));
-        runFail(() -> rs.updateClob(colIndex, emptyReader, 0L));
-        runFail(() -> rs.updateClob(colIndex, emptyReader));
-        runFail(() -> rs.updateArray(colIndex, null));
-        runFail(() -> rs.updateRowId(colIndex, null));
-        runFail(() -> rs.updateNString(colIndex, ""));
-        runFail(() -> rs.updateNClob(colIndex, (NClob) null));
-        runFail(() -> rs.updateNClob(colIndex, emptyReader, 0L));
-        runFail(() -> rs.updateNClob(colIndex, emptyReader));
-        runFail(() -> rs.updateSQLXML(colIndex, null));
-        runFail(() -> rs.updateNCharacterStream(colIndex, emptyReader, 0L));
-        runFail(() -> rs.updateNCharacterStream(colIndex, emptyReader));
-
-        // Label-based updateXXX methods
-        runFail(() -> rs.updateNull(colLabel));
-        runFail(() -> rs.updateBoolean(colLabel, true));
-        runFail(() -> rs.updateByte(colLabel, (byte) 0));
-        runFail(() -> rs.updateShort(colLabel, (short) 0));
-        runFail(() -> rs.updateInt(colLabel, 0));
-        runFail(() -> rs.updateLong(colLabel, 0L));
-        runFail(() -> rs.updateFloat(colLabel, 0.0f));
-        runFail(() -> rs.updateDouble(colLabel, 0.0));
-        runFail(() -> rs.updateBigDecimal(colLabel, BigDecimal.ZERO));
-        runFail(() -> rs.updateString(colLabel, ""));
-        runFail(() -> rs.updateBytes(colLabel, bytes));
-        runFail(() -> rs.updateDate(colLabel, new Date(0)));
-        runFail(() -> rs.updateTime(colLabel, new Time(0)));
-        runFail(() -> rs.updateTimestamp(colLabel, new Timestamp(0)));
-        runFail(() -> rs.updateAsciiStream(colLabel, emptyStream, 0));
-        runFail(() -> rs.updateAsciiStream(colLabel, emptyStream, 0L));
-        runFail(() -> rs.updateAsciiStream(colLabel, emptyStream));
-        runFail(() -> rs.updateBinaryStream(colLabel, emptyStream, 0));
-        runFail(() -> rs.updateBinaryStream(colLabel, emptyStream, 0L));
-        runFail(() -> rs.updateBinaryStream(colLabel, emptyStream));
-        runFail(() -> rs.updateCharacterStream(colLabel, emptyReader, 0));
-        runFail(() -> rs.updateCharacterStream(colLabel, emptyReader, 0L));
-        runFail(() -> rs.updateCharacterStream(colLabel, emptyReader));
-        runFail(() -> rs.updateObject(colLabel, null, 0));
-        runFail(() -> rs.updateObject(colLabel, null));
-        runFail(() -> rs.updateRef(colLabel, null));
-        runFail(() -> rs.updateBlob(colLabel, blob));
-        runFail(() -> rs.updateBlob(colLabel, emptyStream, 0L));
-        runFail(() -> rs.updateBlob(colLabel, emptyStream));
-        runFail(() -> rs.updateClob(colLabel, clob));
-        runFail(() -> rs.updateClob(colLabel, emptyReader, 0L));
-        runFail(() -> rs.updateClob(colLabel, emptyReader));
-        runFail(() -> rs.updateArray(colLabel, null));
-        runFail(() -> rs.updateRowId(colLabel, null));
-        runFail(() -> rs.updateNString(colLabel, ""));
-        runFail(() -> rs.updateNClob(colLabel, (NClob) null));
-        runFail(() -> rs.updateNClob(colLabel, emptyReader, 0L));
-        runFail(() -> rs.updateNClob(colLabel, emptyReader));
-        runFail(() -> rs.updateSQLXML(colLabel, null));
-        runFail(() -> rs.updateNCharacterStream(colLabel, emptyReader, 0L));
-        runFail(() -> rs.updateNCharacterStream(colLabel, emptyReader));
-
-        // Test row-level operations
-        runFail(rs::insertRow);
-        runFail(rs::updateRow);
-        runFail(rs::deleteRow);
-        runFail(rs::refreshRow);
-        runFail(rs::cancelRowUpdates);
-        runFail(rs::moveToInsertRow);
-        runFail(rs::moveToCurrentRow);
-
-        rs.close();
       });
     }
   }

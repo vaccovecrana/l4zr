@@ -350,7 +350,7 @@ public class L4RsTest {
           rs.getString("text_val");
           fail("Expected SQLException for closed ResultSet");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateClosed, e.getSQLState());
+          assertEquals(SqlStateGeneralError, e.getSQLState());
         }
       });
 
@@ -401,7 +401,7 @@ public class L4RsTest {
           rs.next();
           fail("Expected SQLException for closed ResultSet");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateClosed, e.getSQLState());
+          assertEquals(L4Jdbc.SqlStateGeneralError, e.getSQLState());
         }
       });
 
@@ -580,7 +580,7 @@ public class L4RsTest {
           rs.getInt("id");
           fail("Expected SQLException for closed ResultSet");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateClosed, e.getSQLState());
+          assertEquals(L4Jdbc.SqlStateGeneralError, e.getSQLState());
         }
       });
 
@@ -614,7 +614,7 @@ public class L4RsTest {
           rs.getString(1);
           fail("Expected SQLException for closed ResultSet");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateClosed, e.getSQLState());
+          assertEquals(L4Jdbc.SqlStateGeneralError, e.getSQLState());
         }
       });
     }

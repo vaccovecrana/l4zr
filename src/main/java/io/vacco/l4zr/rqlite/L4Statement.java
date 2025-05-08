@@ -5,12 +5,12 @@ import java.util.*;
 
 public class L4Statement {
 
-  private String sql;
+  public String sql;
   private List<Object> positionalParams = new ArrayList<>();
   private Map<String, Object> namedParams;
 
   public L4Statement sql(String sql) {
-    this.sql = sql;
+    this.sql = Objects.requireNonNull(sql);
     return this;
   }
 

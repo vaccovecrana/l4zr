@@ -10,6 +10,7 @@ import java.sql.*;
 import java.sql.Date;
 import java.util.*;
 
+import static io.vacco.l4zr.jdbc.L4Err.*;
 import static io.vacco.l4zr.jdbc.L4Jdbc.*;
 import static java.lang.String.format;
 
@@ -30,7 +31,7 @@ public class L4Rs implements ResultSet {
 
   private void checkClosed() throws SQLException {
     if (isClosed) {
-      throw new SQLException("ResultSet is closed", L4Jdbc.SqlStateClosed);
+      throw new SQLException("ResultSet is closed", SqlStateGeneralError);
     }
   }
 
@@ -395,7 +396,7 @@ public class L4Rs implements ResultSet {
 
   private void noUpdateImpl() throws SQLException {
     checkClosed();
-    throw new SQLException("Updates not supported", L4Jdbc.SqlStateFeatureNotSupported);
+    throw new SQLException("Updates not supported", SqlStateFeatureNotSupported);
   }
 
   @Override public void updateNull(int columnIndex) throws SQLException { noUpdateImpl(); }

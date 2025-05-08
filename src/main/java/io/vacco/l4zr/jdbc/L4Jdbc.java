@@ -1,6 +1,5 @@
 package io.vacco.l4zr.jdbc;
 
-import io.vacco.l4zr.rqlite.L4Result;
 import javax.sql.rowset.serial.SerialClob;
 import java.io.*;
 import java.math.*;
@@ -13,6 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 
+import static io.vacco.l4zr.jdbc.L4Err.*;
 import static java.sql.Types.*;
 import static java.lang.String.format;
 
@@ -48,16 +48,6 @@ public class L4Jdbc {
   public static final String RQ_BLOB      = "BLOB";
   public static final String RQ_NULL      = "NULL";
 
-  public static final String
-    SqlStateInvalidParam        = "22003",
-    SqlStateInvalidConversion   = "22018",
-    SqlStateClosed              = "HY000",
-    SqlStateInvalidColumn       = "22003",
-    SqlStateInvalidCursor       = "24000",
-    SqlStateFeatureNotSupported = "0A000",
-    SqlStateInvalidAttr         = "HY092",
-    SqlStateInvalidType         = "22005";
-
   public static boolean anyOf(int sourceType, int ... types) {
     for (var t : types) {
       if (sourceType == t) {
@@ -65,44 +55,6 @@ public class L4Jdbc {
       }
     }
     return false;
-  }
-
-  public static void checkColumn(int idx, L4Result result) throws SQLException {
-    if (idx < 1 || idx > result.columns.size()) {
-      throw new SQLException("Invalid column index: " + idx, "22003");
-    }
-  }
-
-  public static void checkColumnLabel(String label, L4Result result) throws SQLException {
-    if (label == null || !result.columns.contains(label)) {
-      throw new SQLException("Invalid column label: " + label, SqlStateInvalidParam);
-    }
-  }
-
-  public static void checkRow(int currentRow, L4Result result, boolean isClosed) throws SQLException {
-    if (isClosed) {
-      throw new SQLException("ResultSet is closed", SqlStateClosed);
-    }
-    if (currentRow < 0 || currentRow >= result.values.size()) {
-      throw new SQLException("Invalid row position: " + (currentRow + 1), SqlStateInvalidCursor);
-    }
-  }
-
-  private static void rangeError(String value, int columnIndex, int jdbcType) throws SQLException {
-    throw new SQLException(
-      format("Value [%s] out of range for JDBC type [%d] in column %d", value, jdbcType, columnIndex),
-      SqlStateInvalidType
-    );
-  }
-
-  private static void castError(String value, int columnIndex, int sourceJdbcType, int targetJdbcType) throws SQLException {
-    throw new SQLException(
-      format(
-        "Cannot convert value [%s], column %d (type %d) to (type %d)",
-        value, columnIndex, sourceJdbcType, targetJdbcType
-      ),
-      SqlStateInvalidConversion
-    );
   }
 
   public static boolean castBoolean(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -397,7 +349,7 @@ public class L4Jdbc {
       } catch (DateTimeParseException e) {
         throw new SQLException(
           format("Invalid timestamp format for column %d: %s", columnIndex, value),
-          L4Jdbc.SqlStateInvalidType, e
+          SqlStateInvalidType, e
         );
       }
     } else if (sourceJdbcType == INTEGER) {
@@ -407,11 +359,11 @@ public class L4Jdbc {
       } catch (NumberFormatException e) {
         throw new SQLException(
           format("Invalid timestamp format for column %d: %s", columnIndex, value),
-          L4Jdbc.SqlStateInvalidType, e
+          SqlStateInvalidType, e
         );
       }
     }
-    L4Jdbc.castError(value, columnIndex, sourceJdbcType, Types.TIMESTAMP);
+    castError(value, columnIndex, sourceJdbcType, Types.TIMESTAMP);
     return null;
   }
 

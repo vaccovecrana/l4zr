@@ -95,7 +95,7 @@ public class L4JdbcTest {
       L4Jdbc.checkRow(1, result, false); // Valid
       runFail(() -> L4Jdbc.checkRow(-1, result, false), L4Jdbc.SqlStateInvalidCursor);
       runFail(() -> L4Jdbc.checkRow(2, result, false), L4Jdbc.SqlStateInvalidCursor);
-      runFail(() -> L4Jdbc.checkRow(0, result, true), L4Jdbc.SqlStateClosed);
+      runFail(() -> L4Jdbc.checkRow(0, result, true), L4Jdbc.SqlStateGeneralError);
     });
 
     it("Tests L4Jdbc getJdbcType", () -> {

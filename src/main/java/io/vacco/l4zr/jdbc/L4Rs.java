@@ -31,7 +31,7 @@ public class L4Rs implements ResultSet {
 
   private void checkClosed() throws SQLException {
     if (isClosed) {
-      throw new SQLException("ResultSet is closed", SqlStateGeneralError);
+      throw rsClosed();
     }
   }
 
@@ -225,7 +225,7 @@ public class L4Rs implements ResultSet {
 
   @Override public String getCursorName() throws SQLException {
     checkClosed();
-    throw new SQLException("Cursor names not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Cursor names");
   }
 
   @Override public ResultSetMetaData getMetaData() throws SQLException {
@@ -250,10 +250,7 @@ public class L4Rs implements ResultSet {
         return i + 1;
       }
     }
-    throw new SQLException(
-      format("Column not found: %s", columnLabel),
-      SqlStateInvalidColumn
-    );
+    throw badColumn(columnLabel);
   }
 
   @Override public Reader getCharacterStream(int columnIndex) throws SQLException {
@@ -294,7 +291,7 @@ public class L4Rs implements ResultSet {
 
   private void noScrollingImpl() throws SQLException {
     checkClosed();
-    throw new SQLException("Scrolling not supported for TYPE_FORWARD_ONLY", SqlStateFeatureNotSupported);
+    throw notSupported("Scrolling for TYPE_FORWARD_ONLY");
   }
 
   @Override public void beforeFirst() throws SQLException {
@@ -343,10 +340,7 @@ public class L4Rs implements ResultSet {
     if (direction == ResultSet.FETCH_FORWARD) {
       return;
     }
-    throw new SQLException(
-      format("Fetch direction not supported for TYPE_FORWARD_ONLY: %d", direction),
-      SqlStateFeatureNotSupported
-    );
+    throw notSupported(format("Fetch direction for TYPE_FORWARD_ONLY: %d", direction));
   }
 
   @Override public int getFetchDirection() throws SQLException {
@@ -357,10 +351,7 @@ public class L4Rs implements ResultSet {
   @Override public void setFetchSize(int rows) throws SQLException {
     checkClosed();
     if (rows < 0) {
-      throw new SQLException(
-        format("Fetch size cannot be negative: %d", rows),
-        SqlStateInvalidAttr
-      );
+      throw badFetchSize(rows);
     }
   }
 
@@ -396,7 +387,7 @@ public class L4Rs implements ResultSet {
 
   private void noUpdateImpl() throws SQLException {
     checkClosed();
-    throw new SQLException("Updates not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Updates");
   }
 
   @Override public void updateNull(int columnIndex) throws SQLException { noUpdateImpl(); }
@@ -454,16 +445,13 @@ public class L4Rs implements ResultSet {
   @Override public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
     var typeName = meta.getColumnTypeName(columnIndex);
     if (map != null && map.containsKey(typeName)) {
-      throw new SQLException(
-        format("Custom type mapping for %s not supported in SQLite", typeName),
-        SqlStateFeatureNotSupported
-      );
+      throw notSupported(format("Custom type mapping for %s in SQLite", typeName));
     }
     return getObject(columnIndex);
   }
 
   @Override public Ref getRef(int columnIndex) throws SQLException {
-    throw new SQLException("REF type not supported in SQLite", SqlStateFeatureNotSupported);
+    throw notSupported("REF type in SQLite");
   }
 
   @Override public Blob getBlob(int columnIndex) throws SQLException {
@@ -476,7 +464,7 @@ public class L4Rs implements ResultSet {
   }
 
   @Override public Array getArray(int columnIndex) throws SQLException {
-    throw new SQLException("ARRAY type not supported in SQLite", SqlStateFeatureNotSupported);
+    throw notSupported("ARRAY type in SQLite");
   }
 
   @Override public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
@@ -544,14 +532,14 @@ public class L4Rs implements ResultSet {
     checkClosed();
     checkRow(currentRow, result, isClosed);
     checkColumn(columnIndex, result);
-    throw new SQLException("RowId not supported", SqlStateFeatureNotSupported);
+    throw notSupported("RowId");
   }
 
   @Override public RowId getRowId(String columnLabel) throws SQLException {
     checkClosed();
     checkRow(currentRow, result, isClosed);
     findColumn(columnLabel);
-    throw new SQLException("RowId not supported", SqlStateFeatureNotSupported);
+    throw notSupported("RowId");
   }
 
   @Override public void updateRowId(int columnIndex, RowId x) throws SQLException { noUpdateImpl(); }
@@ -580,7 +568,7 @@ public class L4Rs implements ResultSet {
   }
 
   @Override public SQLXML getSQLXML(int columnIndex) throws SQLException {
-    throw new SQLException("SQLXML type not supported in SQLite", SqlStateFeatureNotSupported);
+    throw notSupported("SQLXML in SQLite");
   }
 
   @Override public SQLXML getSQLXML(String columnLabel) throws SQLException {
@@ -647,17 +635,17 @@ public class L4Rs implements ResultSet {
 
   @Override public <T> T unwrap(Class<T> iface) throws SQLException {
     if (iface == null) {
-      throw new SQLException("Interface cannot be null");
+      throw badInterface();
     }
     if (iface == ResultSet.class || iface == Wrapper.class) {
       return iface.cast(this);
     }
-    throw new SQLException("Cannot unwrap to " + iface.getName());
+    throw badUnwrap(iface);
   }
 
   @Override public boolean isWrapperFor(Class<?> iface) throws SQLException {
     if (iface == null) {
-      throw new SQLException("Interface cannot be null");
+      throw badInterface();
     }
     return iface == ResultSet.class || iface == Wrapper.class;
   }

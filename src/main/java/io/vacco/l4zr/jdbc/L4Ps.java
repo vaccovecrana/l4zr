@@ -24,7 +24,7 @@ public class L4Ps extends L4St implements PreparedStatement {
 
   private void checkClosed() throws SQLException {
     if (isClosed) {
-      throw new SQLException("PreparedStatement is closed", SqlStateGeneralError);
+      throw psClosed();
     }
   }
 

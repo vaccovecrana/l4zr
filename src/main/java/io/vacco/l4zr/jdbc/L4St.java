@@ -11,14 +11,10 @@ public class L4St implements Statement {
     try {
       b.tryRun();
     } catch (IllegalArgumentException e) {
-      throw new SQLException(e.getMessage(), SqlStateInvalidParam, e);
+      throw badParam(e);
     } catch (Exception e) {
-      throw new SQLException(e.getMessage(), SqlStateInvalidAttr, e);
+      throw badAttr(e);
     }
-  }
-
-  public void notSupported(String feature) throws SQLException {
-    throw new SQLFeatureNotSupportedException(feature + " not supported", L4Jdbc.SqlStateFeatureNotSupported);
   }
 
   @Override
@@ -233,17 +229,17 @@ public class L4St implements Statement {
 
   @Override public <T> T unwrap(Class<T> iface) throws SQLException {
     if (iface == null) {
-      throw new SQLException("Interface cannot be null");
+      throw badInterface();
     }
     if (iface == Statement.class || iface == Wrapper.class) {
       return iface.cast(this);
     }
-    throw new SQLException("Cannot unwrap to " + iface.getName());
+    throw badUnwrap(iface);
   }
 
   @Override public boolean isWrapperFor(Class<?> iface) throws SQLException {
     if (iface == null) {
-      throw new SQLException("Interface cannot be null");
+      throw badInterface();
     }
     return iface == Statement.class || iface == Wrapper.class;
   }

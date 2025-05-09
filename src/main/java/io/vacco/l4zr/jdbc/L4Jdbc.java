@@ -66,10 +66,7 @@ public class L4Jdbc {
         }
         rangeError(value, columnIndex, BOOLEAN);
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid boolean format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badBoolean(columnIndex, value, e);
       }
     } else if (anyOf(sourceJdbcType, VARCHAR, BOOLEAN)) {
       return Boolean.parseBoolean(value);
@@ -87,10 +84,7 @@ public class L4Jdbc {
         }
         rangeError(value, columnIndex, INTEGER);
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid integer format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badInteger(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, INTEGER);
@@ -102,10 +96,7 @@ public class L4Jdbc {
       try {
         return Long.parseLong(value);
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid long format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badLong(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, BIGINT);
@@ -117,10 +108,7 @@ public class L4Jdbc {
       try {
         return Float.parseFloat(value);
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid float format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badFloat(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, FLOAT);
@@ -132,10 +120,7 @@ public class L4Jdbc {
       try {
         return Double.parseDouble(value);
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid double format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badDouble(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, DOUBLE);
@@ -151,10 +136,7 @@ public class L4Jdbc {
         }
         rangeError(value, columnIndex, TINYINT);
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid byte format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badByte(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, TINYINT);
@@ -170,10 +152,7 @@ public class L4Jdbc {
         }
         rangeError(value, columnIndex, SMALLINT);
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid short format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badShort(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, SMALLINT);
@@ -189,10 +168,7 @@ public class L4Jdbc {
         }
         return bd;
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid numeric format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badBigDecimal(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, NUMERIC);
@@ -223,10 +199,7 @@ public class L4Jdbc {
         var bytes = Base64.getDecoder().decode(value);
         return new ByteArrayInputStream(bytes);
       } catch (IllegalArgumentException e) {
-        throw new SQLException(
-          format("Base64 decoding error for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badB64(columnIndex, value, e);
       }
     } else if (anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR, INTEGER, DOUBLE, NUMERIC, BOOLEAN)) {
       return new ByteArrayInputStream(value.getBytes(StandardCharsets.UTF_8)); // Encode as UTF-8
@@ -248,10 +221,7 @@ public class L4Jdbc {
       try {
         return Base64.getDecoder().decode(value);
       } catch (IllegalArgumentException e) {
-        throw new SQLException(
-          format("Base64 decoding error for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badB64(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, BLOB);
@@ -283,20 +253,14 @@ public class L4Jdbc {
           return new Date(zdt.toInstant().toEpochMilli());
         }
       } catch (DateTimeParseException e) {
-        throw new SQLException(
-          format("Invalid date format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badDate(columnIndex, value, e);
       }
     } else if (sourceJdbcType == INTEGER) {
       try {
         var seconds = Long.parseLong(value);
         return new Date(seconds * 1000L); // Unix timestamp
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid timestamp format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badTimestamp(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, DATE);
@@ -312,20 +276,14 @@ public class L4Jdbc {
         var zdt = ldt.atZone(calendar.getTimeZone().toZoneId());
         return new Time(zdt.toInstant().toEpochMilli());
       } catch (DateTimeParseException e) {
-        throw new SQLException(
-          format("Invalid time format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badTime(columnIndex, value, e);
       }
     } else if (sourceJdbcType == INTEGER) {
       try {
         var seconds = Long.parseLong(value);
         return new Time(seconds * 1000L); // Unix timestamp
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid timestamp format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badTimestamp(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, TIME);
@@ -347,20 +305,14 @@ public class L4Jdbc {
           return new Timestamp(zdt.toInstant().toEpochMilli());
         }
       } catch (DateTimeParseException e) {
-        throw new SQLException(
-          format("Invalid timestamp format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badTimestamp(columnIndex, value, e);
       }
     } else if (sourceJdbcType == INTEGER) {
       try {
         var seconds = Long.parseLong(value);
         return new Timestamp(seconds * 1000L); // Unix timestamp
       } catch (NumberFormatException e) {
-        throw new SQLException(
-          format("Invalid timestamp format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badTimestamp(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, Types.TIMESTAMP);
@@ -372,10 +324,7 @@ public class L4Jdbc {
       try {
         return new URL(value);
       } catch (MalformedURLException e) {
-        throw new SQLException(
-          format("Invalid URL format for column %d: %s", columnIndex, value),
-          SqlStateInvalidType, e
-        );
+        throw badUrl(columnIndex, value, e);
       }
     }
     castError(value, columnIndex, sourceJdbcType, DATALINK);
@@ -400,7 +349,7 @@ public class L4Jdbc {
 
   public static <T> T castObject(String value, int columnIndex, int sourceJdbcType, Class<T> type) throws SQLException {
     if (type == null) {
-      throw new SQLException("Target type cannot be null for column " + columnIndex, SqlStateInvalidType);
+      throw badType(columnIndex, value);
     }
     Object result;
     if (type == String.class && anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR)) {
@@ -422,10 +371,7 @@ public class L4Jdbc {
     } else if (type == byte[].class && sourceJdbcType == BLOB) {
       result = castBlob(value, columnIndex, sourceJdbcType);
     } else {
-      throw new SQLException(
-        format("Cannot convert column %d (type %d) to %s", columnIndex, sourceJdbcType, type.getName()),
-        SqlStateFeatureNotSupported
-      );
+      throw badConversion(columnIndex, sourceJdbcType, type);
     }
     return type.cast(result);
   }
@@ -459,16 +405,10 @@ public class L4Jdbc {
         case NCHARACTER_STREAM: return castNCharacterStream(value, columnIndex, sourceJdbcType);
         case NULL:              return null;
         default:
-          throw new SQLException(
-            format("Unsupported JDBC type %d for column %d", targetJdbcType, columnIndex),
-            SqlStateFeatureNotSupported
-          );
+          throw notSupported(format("JDBC type %d for column %d", targetJdbcType, columnIndex));
       }
     } catch (Exception e) {
-      throw new SQLException(
-        format("Conversion error for column %d: %s", columnIndex, value),
-        SqlStateInvalidConversion, e
-      );
+      throw badConversion(columnIndex, value, e);
     }
   }
 

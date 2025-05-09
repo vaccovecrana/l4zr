@@ -6,7 +6,6 @@ import java.util.Objects;
 
 import static io.vacco.l4zr.jdbc.L4Err.*;
 import static io.vacco.l4zr.jdbc.L4Jdbc.*;
-import static java.lang.String.format;
 
 public class L4RsMeta implements ResultSetMetaData {
 
@@ -72,13 +71,13 @@ public class L4RsMeta implements ResultSetMetaData {
       return false; // NULL or unknown
     }
     var typeUpper = type.toUpperCase();
-    return typeUpper.equals(L4Jdbc.RQ_INTEGER) ||
-      typeUpper.equals(L4Jdbc.RQ_NUMERIC) ||
-      typeUpper.equals(L4Jdbc.RQ_TINYINT) ||
-      typeUpper.equals(L4Jdbc.RQ_SMALLINT) ||
-      typeUpper.equals(L4Jdbc.RQ_BIGINT) ||
-      typeUpper.equals(L4Jdbc.RQ_FLOAT) ||
-      typeUpper.equals(L4Jdbc.RQ_DOUBLE);
+    return typeUpper.equals(L4Jdbc.RQ_INTEGER)
+      || typeUpper.equals(L4Jdbc.RQ_NUMERIC)
+      || typeUpper.equals(L4Jdbc.RQ_TINYINT)
+      || typeUpper.equals(L4Jdbc.RQ_SMALLINT)
+      || typeUpper.equals(L4Jdbc.RQ_BIGINT)
+      || typeUpper.equals(L4Jdbc.RQ_FLOAT)
+      || typeUpper.equals(L4Jdbc.RQ_DOUBLE);
   }
 
   @Override public int getColumnDisplaySize(int column) throws SQLException {
@@ -183,10 +182,7 @@ public class L4RsMeta implements ResultSetMetaData {
     var typeUpper = type.toUpperCase();
     var jt = getJdbcType(typeUpper);
     if (jt == -1) {
-      throw new SQLException(
-        format("Unrecognized rqlite type: [%s] for column [%d]", type, column),
-        SqlStateInvalidType
-      );
+      throw badRqLiteColumn(column, type);
     }
     return jt;
   }
@@ -248,17 +244,17 @@ public class L4RsMeta implements ResultSetMetaData {
   /* Support ResultSetMetaData and Wrapper. */
   @Override public <T> T unwrap(Class<T> iface) throws SQLException {
     if (iface == null) {
-      throw new SQLException("Interface cannot be null");
+      throw badInterface();
     }
     if (iface == ResultSetMetaData.class || iface == Wrapper.class) {
       return iface.cast(this);
     }
-    throw new SQLException("Cannot unwrap to " + iface.getName());
+    throw badUnwrap(iface);
   }
 
   @Override public boolean isWrapperFor(Class<?> iface) throws SQLException {
     if (iface == null) {
-      throw new SQLException("Interface cannot be null");
+      throw badInterface();
     }
     return iface == ResultSetMetaData.class || iface == Wrapper.class;
   }

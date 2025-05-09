@@ -64,15 +64,14 @@ public class L4Jdbc {
         if (longVal == 0 || longVal == 1) {
           return longVal == 1;
         }
-        rangeError(value, columnIndex, BOOLEAN);
+        throw rangeError(value, columnIndex, BOOLEAN);
       } catch (NumberFormatException e) {
         throw badBoolean(columnIndex, value, e);
       }
     } else if (anyOf(sourceJdbcType, VARCHAR, BOOLEAN)) {
       return Boolean.parseBoolean(value);
     }
-    castError(value, columnIndex, sourceJdbcType, BOOLEAN);
-    return false;
+    throw castError(value, columnIndex, sourceJdbcType, BOOLEAN);
   }
 
   public static int castInteger(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -82,13 +81,12 @@ public class L4Jdbc {
         if (longVal >= Integer.MIN_VALUE && longVal <= Integer.MAX_VALUE) {
           return (int) longVal;
         }
-        rangeError(value, columnIndex, INTEGER);
+        throw rangeError(value, columnIndex, INTEGER);
       } catch (NumberFormatException e) {
         throw badInteger(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, INTEGER);
-    return -1;
+    throw castError(value, columnIndex, sourceJdbcType, INTEGER);
   }
 
   public static long castLong(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -99,8 +97,7 @@ public class L4Jdbc {
         throw badLong(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, BIGINT);
-    return -1;
+    throw castError(value, columnIndex, sourceJdbcType, BIGINT);
   }
 
   public static float castFloat(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -111,8 +108,7 @@ public class L4Jdbc {
         throw badFloat(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, FLOAT);
-    return -1;
+    throw castError(value, columnIndex, sourceJdbcType, FLOAT);
   }
 
   public static double castDouble(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -123,8 +119,7 @@ public class L4Jdbc {
         throw badDouble(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, DOUBLE);
-    return -1;
+    throw castError(value, columnIndex, sourceJdbcType, DOUBLE);
   }
 
   public static byte castByte(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -134,13 +129,12 @@ public class L4Jdbc {
         if (longVal >= Byte.MIN_VALUE && longVal <= Byte.MAX_VALUE) {
           return (byte) longVal;
         }
-        rangeError(value, columnIndex, TINYINT);
+        throw rangeError(value, columnIndex, TINYINT);
       } catch (NumberFormatException e) {
         throw badByte(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, TINYINT);
-    return -1;
+    throw castError(value, columnIndex, sourceJdbcType, TINYINT);
   }
 
   public static short castShort(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -150,13 +144,12 @@ public class L4Jdbc {
         if (longVal >= Short.MIN_VALUE && longVal <= Short.MAX_VALUE) {
           return (short) longVal;
         }
-        rangeError(value, columnIndex, SMALLINT);
+        throw rangeError(value, columnIndex, SMALLINT);
       } catch (NumberFormatException e) {
         throw badShort(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, SMALLINT);
-    return -1;
+    throw castError(value, columnIndex, sourceJdbcType, SMALLINT);
   }
 
   public static BigDecimal castBigDecimal(String value, int columnIndex, int sourceJdbcType, int scale) throws SQLException {
@@ -171,8 +164,7 @@ public class L4Jdbc {
         throw badBigDecimal(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, NUMERIC);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, NUMERIC);
   }
 
   public static InputStream castAsciiStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -180,8 +172,7 @@ public class L4Jdbc {
       var asciiBytes = value.getBytes(StandardCharsets.US_ASCII); // Convert non-ASCII to '?'
       return new ByteArrayInputStream(asciiBytes);
     }
-    castError(value, columnIndex, sourceJdbcType, VARCHAR_STREAM);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, VARCHAR_STREAM);
   }
 
   public static InputStream castUnicodeStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -189,8 +180,7 @@ public class L4Jdbc {
       var unicodeBytes = value.getBytes(StandardCharsets.UTF_16BE); // Encode as UTF-16BE
       return new ByteArrayInputStream(unicodeBytes);
     }
-    castError(value, columnIndex, sourceJdbcType, UNICODE_STREAM);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, UNICODE_STREAM);
   }
 
   public static InputStream castBinaryStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -204,16 +194,14 @@ public class L4Jdbc {
     } else if (anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR, INTEGER, DOUBLE, NUMERIC, BOOLEAN)) {
       return new ByteArrayInputStream(value.getBytes(StandardCharsets.UTF_8)); // Encode as UTF-8
     }
-    castError(value, columnIndex, sourceJdbcType, BINARY_STREAM);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, BINARY_STREAM);
   }
 
   public static Reader castCharacterStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
     if (anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR, INTEGER, DOUBLE, NUMERIC, BOOLEAN)) {
       return new StringReader(value);
     }
-    castError(value, columnIndex, sourceJdbcType, CHARACTER_STREAM);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, CHARACTER_STREAM);
   }
 
   public static byte[] castBlob(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -224,16 +212,14 @@ public class L4Jdbc {
         throw badB64(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, BLOB);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, BLOB);
   }
 
   public static Clob castClob(String value, int columnIndex, int sourceJdbcType) throws SQLException {
     if (anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR)) {
       return new SerialClob(value.toCharArray());
     }
-    castError(value, columnIndex, sourceJdbcType, CLOB);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, CLOB);
   }
 
   public static Date castDate(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
@@ -263,8 +249,7 @@ public class L4Jdbc {
         throw badTimestamp(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, DATE);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, DATE);
   }
 
   public static Time castTime(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
@@ -286,8 +271,7 @@ public class L4Jdbc {
         throw badTimestamp(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, TIME);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, TIME);
   }
 
   public static Timestamp castTimestamp(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
@@ -315,8 +299,7 @@ public class L4Jdbc {
         throw badTimestamp(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, Types.TIMESTAMP);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, Types.TIMESTAMP);
   }
 
   public static URL castURL(String value, int columnIndex, int sourceJdbcType) throws SQLException {
@@ -327,24 +310,21 @@ public class L4Jdbc {
         throw badUrl(columnIndex, value, e);
       }
     }
-    castError(value, columnIndex, sourceJdbcType, DATALINK);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, DATALINK);
   }
 
   public static NClob castNClob(String value, int columnIndex, int sourceJdbcType) throws SQLException {
     if (anyOf(sourceJdbcType, VARCHAR, NCLOB, NVARCHAR, CLOB)) {
       return new L4NClob(value.toCharArray());
     }
-    castError(value, columnIndex, sourceJdbcType, NCLOB);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, NCLOB);
   }
 
   public static Reader castNCharacterStream(String value, int columnIndex, int sourceJdbcType) throws SQLException {
     if (anyOf(sourceJdbcType, VARCHAR, NVARCHAR, CLOB, NCLOB)) {
       return new StringReader(value);
     }
-    castError(value, columnIndex, sourceJdbcType, NCHARACTER_STREAM);
-    return null;
+    throw castError(value, columnIndex, sourceJdbcType, NCHARACTER_STREAM);
   }
 
   public static <T> T castObject(String value, int columnIndex, int sourceJdbcType, Class<T> type) throws SQLException {

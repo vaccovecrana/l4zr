@@ -26,15 +26,15 @@ public class L4Err {
     );
   }
 
-  public static void rangeError(String value, int columnIndex, int jdbcType) throws SQLException {
-    throw new SQLException(
+  public static SQLException rangeError(String value, int columnIndex, int jdbcType) {
+    return new SQLException(
       format("Value [%s] out of range for JDBC type [%d] in column %d", value, jdbcType, columnIndex),
       SqlStateInvalidType
     );
   }
 
-  public static void castError(String value, int columnIndex, int sourceJdbcType, int targetJdbcType) throws SQLException {
-    throw new SQLException(
+  public static SQLException castError(String value, int columnIndex, int sourceJdbcType, int targetJdbcType) {
+    return new SQLException(
       format(
         "Cannot convert value [%s], column %d (type %d) to (type %d)",
         value, columnIndex, sourceJdbcType, targetJdbcType
@@ -191,7 +191,6 @@ public class L4Err {
     return new SQLException(format("Cannot unwrap to [%s]", iface.getCanonicalName()));
   }
 
-
   public static SQLException rsClosed() {
     return new SQLException("ResultSet is closed", SqlStateGeneralError);
   }
@@ -220,6 +219,5 @@ public class L4Err {
       throw new SQLException("Invalid row position: " + (currentRow + 1), SqlStateInvalidCursor);
     }
   }
-
 
 }

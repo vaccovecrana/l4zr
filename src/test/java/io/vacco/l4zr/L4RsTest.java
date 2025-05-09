@@ -15,6 +15,8 @@ import java.sql.Date;
 import java.time.*;
 import java.util.*;
 
+import static io.vacco.l4zr.jdbc.L4Jdbc.*;
+import static io.vacco.l4zr.jdbc.L4Err.*;
 import static j8spec.J8Spec.*;
 import static java.lang.String.join;
 import static org.junit.Assert.*;
@@ -320,13 +322,13 @@ public class L4RsTest {
           rs.getSQLXML("text_val");
           fail("Expected SQLException for getSQLXML");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.getString("invalid_col");
           fail("Expected SQLException for invalid column label");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateInvalidColumn, e.getSQLState());
+          assertEquals(SqlStateInvalidColumn, e.getSQLState());
         }
 
         result.types.set(0, "UNKNOWN");
@@ -334,11 +336,11 @@ public class L4RsTest {
           rs.getMetaData().getColumnType(1);
           fail("Expected SQLException");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateInvalidType, e.getSQLState());
+          assertEquals(SqlStateInvalidType, e.getSQLState());
         }
 
         // Test NULL type
-        result.types.set(0, L4Jdbc.RQ_NULL);
+        result.types.set(0, RQ_NULL);
         assertEquals(Types.NULL, rs.getMetaData().getColumnType(1));
 
         // Test no more rows
@@ -401,7 +403,7 @@ public class L4RsTest {
           rs.next();
           fail("Expected SQLException for closed ResultSet");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateGeneralError, e.getSQLState());
+          assertEquals(SqlStateGeneralError, e.getSQLState());
         }
       });
 
@@ -420,43 +422,43 @@ public class L4RsTest {
           rs.beforeFirst();
           fail("Expected SQLException for beforeFirst");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.afterLast();
           fail("Expected SQLException for afterLast");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.first();
           fail("Expected SQLException for first");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.last();
           fail("Expected SQLException for last");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.absolute(1);
           fail("Expected SQLException for absolute");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.relative(1);
           fail("Expected SQLException for relative");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.previous();
           fail("Expected SQLException for previous");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
 
         // Test fetch direction and size
@@ -466,7 +468,7 @@ public class L4RsTest {
           rs.setFetchDirection(ResultSet.FETCH_REVERSE);
           fail("Expected SQLException for FETCH_REVERSE");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         rs.setFetchSize(10); // Should succeed
         assertEquals(0, rs.getFetchSize()); // Always returns 0
@@ -474,7 +476,7 @@ public class L4RsTest {
           rs.setFetchSize(-1);
           fail("Expected SQLException for negative fetch size");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateInvalidAttr, e.getSQLState());
+          assertEquals(SqlStateInvalidAttr, e.getSQLState());
         }
 
         // Test ResultSet type and concurrency
@@ -489,19 +491,19 @@ public class L4RsTest {
           rs.updateString("text_val", "Updated");
           fail("Expected SQLException for updateString");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.insertRow();
           fail("Expected SQLException for insertRow");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.deleteRow();
           fail("Expected SQLException for deleteRow");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
 
         // Test unsupported types
@@ -509,19 +511,19 @@ public class L4RsTest {
           rs.getRef("id");
           fail("Expected SQLException for getRef");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.getArray("text_val");
           fail("Expected SQLException for getArray");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
         try {
           rs.getRowId("id");
           fail("Expected SQLException for getRowId");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
 
         // Test cursor name
@@ -529,7 +531,7 @@ public class L4RsTest {
           rs.getCursorName();
           fail("Expected SQLException for getCursorName");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateFeatureNotSupported, e.getSQLState());
+          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
         }
 
         // Test warnings
@@ -580,7 +582,7 @@ public class L4RsTest {
           rs.getInt("id");
           fail("Expected SQLException for closed ResultSet");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateGeneralError, e.getSQLState());
+          assertEquals(SqlStateGeneralError, e.getSQLState());
         }
       });
 
@@ -599,13 +601,13 @@ public class L4RsTest {
           rs.getString(0);
           fail("Expected SQLException for invalid column index");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateInvalidColumn, e.getSQLState());
+          assertEquals(SqlStateInvalidColumn, e.getSQLState());
         }
         try {
           rs.getString(19);
           fail("Expected SQLException for invalid column index");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateInvalidColumn, e.getSQLState());
+          assertEquals(SqlStateInvalidColumn, e.getSQLState());
         }
 
         // Test invalid row access
@@ -614,7 +616,7 @@ public class L4RsTest {
           rs.getString(1);
           fail("Expected SQLException for closed ResultSet");
         } catch (SQLException e) {
-          assertEquals(L4Jdbc.SqlStateGeneralError, e.getSQLState());
+          assertEquals(SqlStateGeneralError, e.getSQLState());
         }
       });
     }

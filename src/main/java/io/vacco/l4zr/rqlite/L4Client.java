@@ -11,8 +11,6 @@ import static java.lang.String.format;
 
 public class L4Client {
 
-  private long txTimeoutSec = -1; // no timeout
-
   private final HttpClient httpClient;
   private final String executeURL;
   private final String queryURL;
@@ -93,8 +91,8 @@ public class L4Client {
 
   private HttpResponse<String> doPostRequest(String url, String contentType, String body) throws Exception {
     var builder = HttpRequest.newBuilder().uri(URI.create(url));
-    if (txTimeoutSec > 0) {
-      builder.timeout(Duration.ofSeconds(txTimeoutSec));
+    if (L4Options.timeoutSec > 0) {
+      builder.timeout(Duration.ofSeconds(L4Options.timeoutSec));
     }
     builder.method("POST", HttpRequest.BodyPublishers.ofString(body));
     if (contentType != null && !contentType.isEmpty()) {
@@ -110,8 +108,8 @@ public class L4Client {
       .uri(URI.create(url))
       .GET();
     addBasicAuth(builder);
-    if (txTimeoutSec > 0) {
-      builder.timeout(Duration.ofSeconds(txTimeoutSec));
+    if (L4Options.timeoutSec > 0) {
+      builder.timeout(Duration.ofSeconds(L4Options.timeoutSec));
     }
     var req = builder.build();
     return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
@@ -129,12 +127,12 @@ public class L4Client {
     if (txTimeoutSec < 0) {
       throw new IllegalArgumentException(format("Invalid timeout [%d]", txTimeoutSec));
     }
-    this.txTimeoutSec = txTimeoutSec == 0 ? -1 : txTimeoutSec;
+    L4Options.timeoutSec = txTimeoutSec == 0 ? -1 : txTimeoutSec;
     return this;
   }
 
   public long getTxTimeoutSec() {
-    return txTimeoutSec;
+    return L4Options.timeoutSec;
   }
 
 }

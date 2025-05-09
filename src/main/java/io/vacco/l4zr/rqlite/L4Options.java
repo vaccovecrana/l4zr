@@ -1,13 +1,15 @@
 package io.vacco.l4zr.rqlite;
 
+import static java.lang.String.format;
+
 public class L4Options {
 
-  public static String timeout = "5s";
-  public static boolean queue = true;
+  public static long    timeoutSec = 5;
+  public static boolean queue = false;
   public static boolean wait = true;
   public static L4Level level = L4Level.strong;
-  public static String linearizable_timeout = "5s";
-  public static String freshness = "1s";
+  public static long    linearizableTimeoutSec = 5;
+  public static long    freshnessSec = 5;
   public static boolean freshness_strict = false;
 
   private static String kv(String key, Object value) {
@@ -15,17 +17,21 @@ public class L4Options {
   }
 
   public static String queryParams() {
-    return String.format("?%s&%s&%s&%s&%s&%s&%s&%s&%s",
+    var pairs = new String[] {
       kv("transaction", true),
       kv("timings", true),
-      kv("timeout", timeout),
-      kv("queue", queue),
+      kv("timeout", format("%ds", timeoutSec)),
+      queue ? kv("queue", queue) : "q=q",
       kv("wait", wait),
       kv("level", level),
-      kv("linearizable_timeout", linearizable_timeout),
-      kv("freshness", freshness),
+      level == L4Level.linearizable
+        ? kv("linearizable_timeout", format("%ds", linearizableTimeoutSec))
+        : "lt=lt",
+      kv("freshness", format("%ds", freshnessSec)),
       kv("freshness_strict", freshness_strict)
-    );
+    };
+    var params = String.join("&", pairs);
+    return String.format("?%s", params);
   }
 
   // TODO implement parameter parsing from JDBC URI string

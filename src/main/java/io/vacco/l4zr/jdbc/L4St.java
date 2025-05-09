@@ -56,7 +56,18 @@ public class L4St implements Statement {
       throw badStatement();
     }
     try {
-      var response = client.query(new L4Statement().sql(sql));
+      // maaan this is dangerous...
+      L4Response response;
+      if (sql.contains(";")) {
+        var sta = sql.split(";");
+        response = client.query(
+          Arrays.stream(sta)
+            .map(raw -> new L4Statement().sql(raw))
+            .toArray(L4Statement[]::new)
+        );
+      } else {
+        response = client.query(new L4Statement().sql(sql));
+      }
       results = response.results;
       if (results.isEmpty()) {
         throw generalError("No results returned");
@@ -143,7 +154,11 @@ public class L4St implements Statement {
 
   @Override public void setQueryTimeout(int seconds) throws SQLException {
     checkClosed();
-    client.withTxTimeoutSec(seconds);
+    try {
+      client.withTxTimeoutSec(seconds);
+    } catch (Exception e) {
+      throw badParam(e);
+    }
   }
 
   @Override public void cancel() throws SQLException {

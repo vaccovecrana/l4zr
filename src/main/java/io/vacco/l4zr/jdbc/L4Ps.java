@@ -7,24 +7,18 @@ import java.net.URL;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Objects;
-
-import static io.vacco.l4zr.jdbc.L4Err.*;
-import static java.lang.String.format;
-import static io.vacco.l4zr.jdbc.L4Jdbc.*;
 
 public class L4Ps extends L4St implements PreparedStatement {
 
-  private final L4Client client;
   private final L4Statement statement;
   private boolean isClosed = false;
   private ResultSet currentResultSet = null;
   private int maxRows = 0; // For limiting result set rows (optional)
   private int fetchSize = 0; // For fetch size hint (optional)
 
-  public L4Ps(L4Client client, String sql) {
-    this.client = Objects.requireNonNull(client);
-    this.statement = new L4Statement().sql(sql);
+  public L4Ps(L4Client client) {
+    super(client);
+    this.statement = null;
   }
 
   @Override

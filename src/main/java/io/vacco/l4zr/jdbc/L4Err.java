@@ -20,6 +20,10 @@ public class L4Err {
     SqlStateInvalidQuery        = "42000",
     SqlStateConnectionError     = "08S01";
 
+  public static SQLException generalError(String msg) {
+    return new SQLException(msg, SqlStateGeneralError);
+  }
+
   public static SQLException notSupported(String feature) {
     return new SQLFeatureNotSupportedException(
       format("%s not supported", feature), SqlStateFeatureNotSupported

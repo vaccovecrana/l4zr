@@ -9,11 +9,16 @@ import static io.vacco.l4zr.jdbc.L4Err.*;
 public class L4St implements Statement {
 
   protected final L4Client client;
-  protected boolean isClosed = false;
-  protected L4Rs currentResultSet = null;
-  protected int maxRows = -1;
-  protected int fetchSize = 0;
   protected final List<L4Statement> batch = new ArrayList<>();
+
+  protected boolean isClosed = false;
+  protected L4Rs    currentResultSet = null;
+  protected int     maxRows = -1;
+  protected int     fetchSize = 0;
+
+  private boolean closeOnCompletion = false;
+  private List<L4Result> results = new ArrayList<>();
+  private int currentResultIndex = -1;
 
   public L4St(L4Client client) {
     this.client = Objects.requireNonNull(client);
@@ -35,7 +40,7 @@ public class L4St implements Statement {
     }
   }
 
-  protected void closeCurrentResultSet() {
+  protected void closeCurrentResultSet() throws SQLException {
     if (currentResultSet != null && !currentResultSet.isClosed()) {
       currentResultSet.close();
     }
@@ -45,14 +50,21 @@ public class L4St implements Statement {
   @Override public ResultSet executeQuery(String sql) throws SQLException {
     checkClosed();
     closeCurrentResultSet();
+    results.clear();
+    currentResultIndex = -1;
     if (sql == null || sql.trim().isEmpty()) {
       throw badStatement();
     }
     try {
       var response = client.query(new L4Statement().sql(sql));
-      var result = response.results.get(0);
+      results = response.results;
+      if (results.isEmpty()) {
+        throw generalError("No results returned");
+      }
+      currentResultIndex = 0;
+      var result = results.get(0);
       if (result.isError()) {
-        throw new IllegalStateException(result.error);
+        throw generalError(result.error);
       }
       currentResultSet = new L4Rs(result, this).clampTo(maxRows);
       return currentResultSet;
@@ -64,16 +76,22 @@ public class L4St implements Statement {
   @Override public int executeUpdate(String sql) throws SQLException {
     checkClosed();
     closeCurrentResultSet();
+    results.clear();
+    currentResultIndex = -1;
     if (sql == null || sql.trim().isEmpty()) {
       throw badStatement();
     }
     try {
       var response = client.execute(new L4Statement().sql(sql));
-      var result = response.results.get(0);
-      if (result.isError()) {
-        throw new IllegalStateException(result.error);
+      results = response.results;
+      if (results.isEmpty()) {
+        throw generalError("No results returned");
       }
-      return result.rowsAffected;
+      var result = results.get(0);
+      if (result.isError()) {
+        throw generalError(result.error);
+      }
+      return result.rowsAffected != null ? result.rowsAffected : 0;
     } catch (Exception e) {
       throw badUpdate(e);
     }
@@ -83,6 +101,9 @@ public class L4St implements Statement {
     if (!isClosed) {
       closeCurrentResultSet();
       batch.clear();
+      results.clear();
+      currentResultIndex = -1;
+      closeOnCompletion = false;
       isClosed = true;
     }
   }
@@ -115,14 +136,14 @@ public class L4St implements Statement {
     // TODO implement test case for SQL injection
   }
 
-  @Override
-  public int getQueryTimeout() throws SQLException {
-    return 0;
+  @Override public int getQueryTimeout() throws SQLException {
+    checkClosed();
+    return (int) (client.getTxTimeoutSec() == -1 ? 0 : client.getTxTimeoutSec());
   }
 
-  @Override
-  public void setQueryTimeout(int seconds) throws SQLException {
-
+  @Override public void setQueryTimeout(int seconds) throws SQLException {
+    checkClosed();
+    client.withTxTimeoutSec(seconds);
   }
 
   @Override public void cancel() throws SQLException {
@@ -131,12 +152,12 @@ public class L4St implements Statement {
   }
 
   @Override public SQLWarning getWarnings() throws SQLException {
+    checkClosed();
     return null;
   }
 
-  @Override
-  public void clearWarnings() throws SQLException {
-
+  @Override public void clearWarnings() throws SQLException {
+    checkClosed();
   }
 
   @Override public void setCursorName(String name) throws SQLException {
@@ -147,14 +168,21 @@ public class L4St implements Statement {
   @Override public boolean execute(String sql) throws SQLException {
     checkClosed();
     closeCurrentResultSet();
+    results.clear();
+    currentResultIndex = -1;
     if (sql == null || sql.trim().isEmpty()) {
       throw badStatement();
     }
     try {
       var response = client.execute(new L4Statement().sql(sql));
-      var result = response.results.get(0);
+      results = response.results;
+      if (results.isEmpty()) {
+        return false;
+      }
+      currentResultIndex = 0;
+      var result = results.get(0);
       if (result.isError()) {
-        throw new IllegalStateException(result.error);
+        throw generalError(result.error);
       }
       if (result.columns != null && !result.columns.isEmpty()) {
         currentResultSet = new L4Rs(result, this).clampTo(maxRows);
@@ -173,12 +201,18 @@ public class L4St implements Statement {
 
   @Override public int getUpdateCount() throws SQLException {
     checkClosed();
-    return currentResultSet == null ? -1 : currentResultSet.getUpdateCount();
+    if (currentResultIndex < 0 || currentResultIndex >= results.size()) {
+      return -1;
+    }
+    var result = results.get(currentResultIndex);
+    if (result.columns != null && !result.columns.isEmpty()) {
+      return -1; // Indicates a ResultSet is available
+    }
+    return result.rowsAffected != null ? result.rowsAffected : 0;
   }
 
-  @Override
-  public boolean getMoreResults() throws SQLException {
-    return false;
+  @Override public boolean getMoreResults() throws SQLException {
+    return getMoreResults(CLOSE_CURRENT_RESULT);
   }
 
   @Override public void setFetchDirection(int direction) throws SQLException {
@@ -255,8 +289,25 @@ public class L4St implements Statement {
     return null;
   }
 
-  @Override
-  public boolean getMoreResults(int current) throws SQLException {
+  @Override public boolean getMoreResults(int current) throws SQLException {
+    checkClosed();
+    if (current != CLOSE_CURRENT_RESULT) {
+      throw notSupported("Result handling modes other than CLOSE_CURRENT_RESULT");
+    }
+    closeCurrentResultSet();
+    if (currentResultIndex + 1 < results.size()) {
+      currentResultIndex++;
+      var result = results.get(currentResultIndex);
+      if (result.isError()) {
+        throw generalError(result.error);
+      }
+      if (result.columns != null && !result.columns.isEmpty()) {
+        currentResultSet = new L4Rs(result, this).clampTo(maxRows);
+        return true;
+      }
+      return false;
+    }
+    currentResultIndex = results.size();
     return false;
   }
 
@@ -320,14 +371,14 @@ public class L4St implements Statement {
     throw notSupported("Statement pooling");
   }
 
-  @Override
-  public void closeOnCompletion() throws SQLException {
-
+  @Override public void closeOnCompletion() throws SQLException {
+    checkClosed();
+    closeOnCompletion = true;
   }
 
-  @Override
-  public boolean isCloseOnCompletion() throws SQLException {
-    return false;
+  @Override public boolean isCloseOnCompletion() throws SQLException {
+    checkClosed();
+    return closeOnCompletion;
   }
 
   @Override public <T> T unwrap(Class<T> iface) throws SQLException {

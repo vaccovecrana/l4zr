@@ -7,14 +7,18 @@ import java.util.*;
 import java.io.*;
 import io.vacco.l4zr.json.*;
 
+import static java.lang.String.format;
+
 public class L4Client {
 
-  private HttpClient httpClient;
-  private String executeURL;
-  private String queryURL;
-  private String statusURL;
-  private String nodesURL;
-  private String readyURL;
+  private long txTimeoutSec = -1; // no timeout
+
+  private final HttpClient httpClient;
+  private final String executeURL;
+  private final String queryURL;
+  private final String statusURL;
+  private final String nodesURL;
+  private final String readyURL;
 
   private String basicAuthUser = "";
   private String basicAuthPass = "";
@@ -53,7 +57,6 @@ public class L4Client {
     return query(new L4Statement().sql(statement).withPositionalParams(args));
   }
 
-  // TODO error handling: "400 - invalid request"
   public L4Response query(L4Statement ... statements) throws Exception {
     var body = L4Statement.toArray(statements).toString();
     var queryParams = L4Options.queryParams();
@@ -89,9 +92,10 @@ public class L4Client {
   }
 
   private HttpResponse<String> doPostRequest(String url, String contentType, String body) throws Exception {
-    var builder = HttpRequest.newBuilder()
-      .uri(URI.create(url))
-      .timeout(Duration.ofSeconds(5));
+    var builder = HttpRequest.newBuilder().uri(URI.create(url));
+    if (txTimeoutSec > 0) {
+      builder.timeout(Duration.ofSeconds(txTimeoutSec));
+    }
     builder.method("POST", HttpRequest.BodyPublishers.ofString(body));
     if (contentType != null && !contentType.isEmpty()) {
       builder.header("Content-Type", contentType);
@@ -106,6 +110,9 @@ public class L4Client {
       .uri(URI.create(url))
       .GET();
     addBasicAuth(builder);
+    if (txTimeoutSec > 0) {
+      builder.timeout(Duration.ofSeconds(txTimeoutSec));
+    }
     var req = builder.build();
     return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
   }
@@ -116,6 +123,18 @@ public class L4Client {
       String encoded = Base64.getEncoder().encodeToString(auth.getBytes());
       builder.header("Authorization", "Basic " + encoded);
     }
+  }
+
+  public L4Client withTxTimeoutSec(long txTimeoutSec) {
+    if (txTimeoutSec < 0) {
+      throw new IllegalArgumentException(format("Invalid timeout [%d]", txTimeoutSec));
+    }
+    this.txTimeoutSec = txTimeoutSec == 0 ? -1 : txTimeoutSec;
+    return this;
+  }
+
+  public long getTxTimeoutSec() {
+    return txTimeoutSec;
   }
 
 }

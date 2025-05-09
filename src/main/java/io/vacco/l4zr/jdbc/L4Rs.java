@@ -56,8 +56,15 @@ public class L4Rs implements ResultSet {
     return false;
   }
 
-  @Override public void close() {
-    isClosed = true;
+  @Override public void close() throws SQLException {
+    if (!isClosed) {
+      isClosed = true;
+      if (statement instanceof L4St) {
+        if (statement.isCloseOnCompletion()) {
+          statement.close();
+        }
+      }
+    }
   }
 
   @Override public boolean wasNull() throws SQLException {

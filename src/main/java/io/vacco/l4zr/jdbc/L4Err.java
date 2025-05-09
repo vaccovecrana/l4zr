@@ -155,17 +155,15 @@ public class L4Err {
   }
 
   public static SQLException badColumn(String columnLabel) {
-    return new SQLException(
-      format("Invalid column: %s", columnLabel),
-      SqlStateInvalidColumn
-    );
+    return new SQLException(format("Invalid column: %s", columnLabel), SqlStateInvalidColumn);
   }
 
   public static SQLException badFetchSize(int rows) {
-    return new SQLException(
-      format("Fetch size cannot be negative: %d", rows),
-      SqlStateInvalidAttr
-    );
+    return new SQLException(format("Fetch size cannot be negative: %d", rows), SqlStateInvalidAttr);
+  }
+
+  public static SQLException badMaxRows() {
+    return new SQLException("Max rows cannot be negative", SqlStateInvalidParam);
   }
 
   public static SQLException badRqLiteColumn(int column, String type) {
@@ -191,8 +189,32 @@ public class L4Err {
     return new SQLException(format("Cannot unwrap to [%s]", iface.getCanonicalName()));
   }
 
+  public static SQLException badStatement() {
+    return new SQLException("SQL statement cannot be null or empty", SqlStateInvalidQuery);
+  }
+
+  public static SQLException badQuery(Exception e) {
+    return new SQLException(format("Query execution failed: %s", e.getMessage()), SqlStateConnectionError, e);
+  }
+
+  public static SQLException badUpdate(Exception e) {
+    return new SQLException(format("Update execution failed: %s", e.getMessage()), SqlStateConnectionError, e);
+  }
+
+  public static SQLException badBatch(Exception e) {
+    return new SQLException(format("Batch execution failed: %s", e.getMessage()), SqlStateConnectionError, e);
+  }
+
+  public static SQLException badExec(Exception e) {
+    return new SQLException(format("Execution failed: %s", e.getMessage()), SqlStateConnectionError, e);
+  }
+
   public static SQLException rsClosed() {
     return new SQLException("ResultSet is closed", SqlStateGeneralError);
+  }
+
+  public static SQLException stClosed() {
+    return new SQLException("Statement is closed", SqlStateGeneralError);
   }
 
   public static SQLException psClosed() {

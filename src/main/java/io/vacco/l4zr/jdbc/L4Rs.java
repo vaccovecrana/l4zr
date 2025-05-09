@@ -35,6 +35,17 @@ public class L4Rs implements ResultSet {
     }
   }
 
+  public L4Rs clampTo(int maxRows) {
+    if (maxRows > 0 && result.values.size() > maxRows) {
+      result.values = result.values.subList(0, maxRows);
+    }
+    return this;
+  }
+
+  public int getUpdateCount() {
+    return result.rowsAffected == null ? -1 : result.rowsAffected;
+  }
+
   @Override public boolean next() throws SQLException {
     checkClosed();
     if (currentRow + 1 < result.values.size()) {

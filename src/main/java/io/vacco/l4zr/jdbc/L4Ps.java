@@ -22,19 +22,6 @@ public class L4Ps extends L4St implements PreparedStatement {
   private int maxRows = 0; // For limiting result set rows (optional)
   private int fetchSize = 0; // For fetch size hint (optional)
 
-  private void checkClosed() throws SQLException {
-    if (isClosed) {
-      throw psClosed();
-    }
-  }
-
-  private void closeCurrentResultSet() throws SQLException {
-    if (currentResultSet != null && !currentResultSet.isClosed()) {
-      currentResultSet.close();
-    }
-    currentResultSet = null;
-  }
-
   public L4Ps(L4Client client, String sql) {
     this.client = Objects.requireNonNull(client);
     this.statement = new L4Statement().sql(sql);
@@ -49,7 +36,6 @@ public class L4Ps extends L4St implements PreparedStatement {
   public int executeUpdate() throws SQLException {
     return 0;
   }
-
 
   @Override public void setNull(int parameterIndex, int sqlType) throws SQLException {
     checkClosed();

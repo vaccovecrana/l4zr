@@ -9,6 +9,7 @@ import java.awt.GraphicsEnvironment;
 
 import static java.lang.String.join;
 import static j8spec.J8Spec.*;
+import static org.junit.Assert.*;
 
 @DefinedOrder
 @RunWith(J8SpecRunner.class)
@@ -30,9 +31,11 @@ public class L4ClientTest {
           "  age INTEGER",
           ")"
         ));
+        assertEquals(200, res0.statusCode);
+
 
         var res1 = rq.querySingle("SELECT * FROM users");
-        System.out.println(res1);
+        assertEquals(200, res1.statusCode);
 
         if (res1.results != null) {
           var rl = res1.results;
@@ -48,6 +51,7 @@ public class L4ClientTest {
         }
 
         var res3 = rq.querySingle("SELECT * FROM users WHERE age > ?", 30);
+        assertEquals(200, res3.statusCode);
         System.out.println(res3);
       });
     }

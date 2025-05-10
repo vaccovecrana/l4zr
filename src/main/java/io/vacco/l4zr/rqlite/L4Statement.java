@@ -97,4 +97,8 @@ public class L4Statement {
     return smtList;
   }
 
+  @Override public String toString() {
+    return String.format("[%s]", sql);
+  }
+
 }

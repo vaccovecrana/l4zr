@@ -449,5 +449,78 @@ public class L4JdbcTest {
       // Unsupported target type
       runFail(() -> convertValue("123", Types.INTEGER, Types.ARRAY, colIdx, -1, null, null), SqlStateFeatureNotSupported);
     });
+
+    it("Tests isSelect method", () -> {
+      // Test valid SELECT queries
+      assertTrue(isSelect("SELECT * FROM table"));
+      assertTrue(isSelect("select count(*) from table"));
+      assertTrue(isSelect("SELECT a, b FROM table WHERE x = 1; SELECT c FROM table2"));
+
+      // Test non-SELECT queries
+      assertFalse(isSelect("INSERT INTO table (a) VALUES (1)"));
+      assertFalse(isSelect("UPDATE table SET a = 1"));
+      assertFalse(isSelect("DELETE FROM table"));
+      assertFalse(isSelect("CREATE TABLE table (id INTEGER)"));
+
+      // Test edge cases
+      assertTrue(isSelect("SELECT * FROM table -- comment with select"));
+      assertTrue(isSelect("/* SELECT in comment */ INSERT INTO table (a) VALUES (1)"));
+      assertTrue(isSelect("SELECT * FROM table WHERE name = 'select'"));
+      assertFalse(isSelect(""));
+      assertFalse(isSelect("  "));
+      assertFalse(isSelect(null));
+    });
+
+    it("Tests split method", () -> {
+      // Test single statement
+      var sql1 = "SELECT * FROM table";
+      var result1 = split(sql1);
+      assertEquals(1, result1.length);
+      assertEquals("SELECT * FROM table", result1[0].sql);
+
+      // Test multiple statements
+      var sql2 = "SELECT * FROM table1; SELECT * FROM table2";
+      var result2 = split(sql2);
+      assertEquals(2, result2.length);
+      assertEquals("SELECT * FROM table1", result2[0].sql);
+      assertEquals("SELECT * FROM table2", result2[1].sql);
+
+      // Test semicolons in quoted strings
+      var sql3 = "SELECT * FROM table WHERE name = 'a;b'; INSERT INTO table (name) VALUES ('c;d')";
+      var result3 = split(sql3);
+      assertEquals(2, result3.length);
+      assertEquals("SELECT * FROM table WHERE name = 'a;b'", result3[0].sql);
+      assertEquals("INSERT INTO table (name) VALUES ('c;d')", result3[1].sql);
+
+      // Test semicolons in comments
+      var sql4 = "SELECT * FROM table -- comment; with semicolon\n; INSERT INTO table (a) VALUES (1)";
+      var result4 = split(sql4);
+      assertEquals(2, result4.length);
+      assertEquals("SELECT * FROM table -- comment; with semicolon", result4[0].sql);
+      assertEquals("INSERT INTO table (a) VALUES (1)", result4[1].sql);
+
+      // Test edge cases
+      var sql5 = "";
+      var result5 = split(sql5);
+      assertEquals(0, result5.length);
+
+      var sql6 = ";;";
+      var result6 = split(sql6);
+      assertEquals(0, result6.length); // Empty statements ignored
+
+      var sql7 = "SELECT * FROM table; ; SELECT * FROM table2";
+      var result7 = split(sql7);
+      assertEquals(2, result7.length);
+      assertEquals("SELECT * FROM table", result7[0].sql);
+      assertEquals("SELECT * FROM table2", result7[1].sql);
+
+      // Test null input
+      try {
+        split(null);
+        fail("Expected IllegalArgumentException for null SQL");
+      } catch (IllegalArgumentException e) {
+        assertNotNull(e.getMessage());
+      }
+    });
   }
 }

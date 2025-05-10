@@ -422,12 +422,108 @@ public class L4Jdbc {
   }
 
   public static boolean isSelect(String rawSql) {
+    if (rawSql == null || rawSql.trim().isEmpty()) {
+      return false;
+    }
     return rawSql.toUpperCase().contains("SELECT");
   }
 
-  public static L4Statement[] split(String rawSql) { // TODO maaan this is dangerous... is there a better way to do this?
-    var txa = rawSql.split(";");
-    return Arrays.stream(txa)
+  public static L4Statement[] split(String rawSql) {
+    if (rawSql == null) {
+      throw new IllegalArgumentException("SQL string cannot be null");
+    }
+    rawSql = rawSql.trim();
+    if (rawSql.isEmpty()) {
+      return new L4Statement[0];
+    }
+
+    var statements = new ArrayList<String>();
+    var currentStatement = new StringBuilder();
+    var inSingleQuote = false;
+    var inDoubleQuote = false;
+    var inSingleLineComment = false;
+    var inMultiLineComment = false;
+
+    for (int i = 0; i < rawSql.length(); i++) {
+      var c = rawSql.charAt(i);
+      if (inSingleLineComment) {
+        if (c == '\n') {
+          inSingleLineComment = false;
+        }
+        currentStatement.append(c);
+        continue;
+      }
+      if (inMultiLineComment) {
+        currentStatement.append(c);
+        if (c == '*' && i + 1 < rawSql.length() && rawSql.charAt(i + 1) == '/') {
+          inMultiLineComment = false;
+          currentStatement.append('/');
+          i++;
+        }
+        continue;
+      }
+      if (inSingleQuote) {
+        currentStatement.append(c);
+        if (c == '\'') {
+          inSingleQuote = false;
+        }
+        continue;
+      }
+      if (c == '\'' && !inDoubleQuote) {
+        if (inSingleQuote && i + 1 < rawSql.length() && rawSql.charAt(i + 1) == '\'') {
+          currentStatement.append(c);
+          currentStatement.append('\'');
+          i++;
+          continue;
+        }
+        inSingleQuote = !inSingleQuote;
+        currentStatement.append(c);
+        continue;
+      }
+      if (inDoubleQuote) {
+        currentStatement.append(c);
+        if (c == '"') {
+          inDoubleQuote = false;
+        }
+        continue;
+      }
+      if (c == '"' && !inSingleQuote) {
+        inDoubleQuote = true;
+        currentStatement.append(c);
+        continue;
+      }
+      if (c == '-' && i + 1 < rawSql.length() && rawSql.charAt(i + 1) == '-') {
+        inSingleLineComment = true;
+        currentStatement.append(c);
+        currentStatement.append('-');
+        i++;
+        continue;
+      }
+      if (c == '/' && i + 1 < rawSql.length() && rawSql.charAt(i + 1) == '*') {
+        inMultiLineComment = true;
+        currentStatement.append(c);
+        currentStatement.append('*');
+        i++;
+        continue;
+      }
+      if (c == ';') {
+        var stmt = currentStatement.toString().trim();
+        if (!stmt.isEmpty()) {
+          statements.add(stmt);
+        }
+        currentStatement = new StringBuilder();
+        continue;
+      }
+      currentStatement.append(c);
+    }
+
+    // Add the last statement if non-empty
+    var lastStmt = currentStatement.toString().trim();
+    if (!lastStmt.isEmpty()) {
+      statements.add(lastStmt);
+    }
+
+    return statements.stream()
       .map(raw -> new L4Statement().sql(raw))
       .toArray(L4Statement[]::new);
   }

@@ -1,5 +1,6 @@
 package io.vacco.l4zr.jdbc;
 
+import io.vacco.l4zr.rqlite.L4Statement;
 import javax.sql.rowset.serial.SerialClob;
 import java.io.*;
 import java.math.*;
@@ -418,6 +419,17 @@ public class L4Jdbc {
       case RQ_NULL:       return Types.NULL;
       default: return -1;
     }
+  }
+
+  public static boolean isSelect(String rawSql) {
+    return rawSql.toUpperCase().contains("SELECT");
+  }
+
+  public static L4Statement[] split(String rawSql) { // TODO maaan this is dangerous... is there a better way to do this?
+    var txa = rawSql.split(";");
+    return Arrays.stream(txa)
+      .map(raw -> new L4Statement().sql(raw))
+      .toArray(L4Statement[]::new);
   }
 
 }

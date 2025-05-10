@@ -4,6 +4,7 @@ import io.vacco.l4zr.rqlite.*;
 import java.sql.*;
 import java.util.*;
 
+import static io.vacco.l4zr.jdbc.L4Jdbc.*;
 import static io.vacco.l4zr.jdbc.L4Err.*;
 
 public class L4St implements Statement {
@@ -47,6 +48,12 @@ public class L4St implements Statement {
     currentResultSet = null;
   }
 
+  private L4Response runRaw(String sql) throws Exception {
+    var sel = isSelect(sql);
+    var sta = split(sql);
+    return sel ? client.query(sta) : client.execute(sta);
+  }
+
   @Override public ResultSet executeQuery(String sql) throws SQLException {
     checkClosed();
     closeCurrentResultSet();
@@ -56,19 +63,7 @@ public class L4St implements Statement {
       throw badStatement();
     }
     try {
-      // maaan this is dangerous...
-      L4Response response;
-      if (sql.contains(";")) {
-        var sta = sql.split(";");
-        response = client.query(
-          Arrays.stream(sta)
-            .map(raw -> new L4Statement().sql(raw))
-            .toArray(L4Statement[]::new)
-        );
-      } else {
-        response = client.query(new L4Statement().sql(sql));
-      }
-      results = response.results;
+      results = runRaw(sql).results;
       if (results.isEmpty()) {
         throw generalError("No results returned");
       }
@@ -189,8 +184,7 @@ public class L4St implements Statement {
       throw badStatement();
     }
     try {
-      var response = client.execute(new L4Statement().sql(sql));
-      results = response.results;
+      results = runRaw(sql).results;
       if (results.isEmpty()) {
         return false;
       }

@@ -22,32 +22,6 @@ import static org.junit.Assert.*;
 @RunWith(J8SpecRunner.class)
 public class L4PsTest {
 
-  // Helper to read InputStream content
-  private static String readStream(InputStream is, String charset) throws Exception {
-    if (is == null) return null;
-    try (var baos = new ByteArrayOutputStream()) {
-      byte[] buffer = new byte[1024];
-      int len;
-      while ((len = is.read(buffer)) != -1) {
-        baos.write(buffer, 0, len);
-      }
-      return baos.toString(charset);
-    }
-  }
-
-  // Helper to read Reader content
-  private static String readReader(Reader reader) throws Exception {
-    if (reader == null) return null;
-    try (var sw = new StringWriter()) {
-      char[] buffer = new char[1024];
-      int len;
-      while ((len = reader.read(buffer)) != -1) {
-        sw.write(buffer, 0, len);
-      }
-      return sw.toString();
-    }
-  }
-
   // Helper to set up test table
   private static void setupTestTable(L4Client rq) throws Exception {
     var dr = rq.executeSingle("DROP TABLE IF EXISTS ps_test_data");
@@ -551,6 +525,270 @@ public class L4PsTest {
         ps.close();
         selectPs.close();
         invalidPs.close();
+      });
+
+      it("Tests L4Ps stream, LOB, and null parameter setting methods", () -> {
+        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
+        setupTestTable(rq);
+        var insertSql = "INSERT INTO ps_test_data (" +
+          "text_val, clob_val, nclob_val, nstring_val, blob_val" +
+          ") VALUES (?, ?, ?, ?, ?)";
+        var ps = new L4Ps(rq, insertSql);
+
+        // Test data
+        var unicodeText = "Unicode 世界"; // Text with non-ASCII characters
+        var asciiText = "ASCII text";
+        var charText = "Character stream text";
+        var clobText = "CLOB long content";
+        var nclobText = "NCLOB long content";
+        var nstringText = "NSTRING content";
+        var blobData = "BLOB binary data".getBytes(StandardCharsets.UTF_8);
+
+        // Set parameters using the specified methods
+        ps.setUnicodeStream(1, new ByteArrayInputStream(unicodeText.getBytes(StandardCharsets.UTF_16)), unicodeText.getBytes(StandardCharsets.UTF_16).length);
+        ps.setClob(2, new StringReader(clobText), clobText.length());
+        ps.setNClob(3, new StringReader(nclobText), nclobText.length());
+        ps.setCharacterStream(4, new StringReader(nstringText), nstringText.length());
+        ps.setBlob(5, new ByteArrayInputStream(blobData), blobData.length);
+
+        // Execute update
+        int rowsAffected = ps.executeUpdate();
+        assertEquals(1, rowsAffected);
+
+        // Verify inserted data
+        var selectPs = new L4Ps(rq, "SELECT text_val, clob_val, nclob_val, nstring_val, blob_val FROM ps_test_data WHERE id = ?");
+        selectPs.setInt(1, 1);
+        var rs = selectPs.executeQuery();
+        assertTrue(rs.next());
+        assertEquals(unicodeText, rs.getString("text_val"));
+        assertEquals(clobText, rs.getClob("clob_val").getSubString(1, clobText.length()));
+        assertEquals(nclobText, rs.getNClob("nclob_val").getSubString(1, nclobText.length()));
+        assertEquals(nstringText, rs.getNString("nstring_val"));
+        assertArrayEquals(blobData, rs.getBytes("blob_val"));
+        assertFalse(rs.next());
+        rs.close();
+
+        // Test additional stream methods and null setting
+        ps.clearParameters();
+        ps.setAsciiStream(1, new ByteArrayInputStream(asciiText.getBytes(StandardCharsets.US_ASCII)), (long) asciiText.length());
+        ps.setCharacterStream(2, new StringReader(charText)); // No length
+        ps.setNull(3, Types.NCLOB, "NCLOB"); // Null with typeName
+        ps.setBinaryStream(4, new ByteArrayInputStream(nstringText.getBytes(StandardCharsets.UTF_8)), (long) nstringText.length());
+        ps.setBlob(5, new javax.sql.rowset.serial.SerialBlob(blobData)); // Blob object
+
+        rowsAffected = ps.executeUpdate();
+        assertEquals(1, rowsAffected);
+
+        // Verify second insert
+        selectPs.setInt(1, 2);
+        rs = selectPs.executeQuery();
+        assertTrue(rs.next());
+        assertEquals(asciiText, rs.getString("text_val"));
+        assertEquals(charText, rs.getClob("clob_val").getSubString(1, charText.length()));
+        assertNull(rs.getNClob("nclob_val"));
+        assertTrue(rs.wasNull());
+
+        assertArrayEquals(blobData, rs.getBytes("blob_val"));
+        assertFalse(rs.next());
+        rs.close();
+
+        // Test null stream inputs
+        ps.clearParameters();
+        ps.setUnicodeStream(1, null, 0);
+        ps.setAsciiStream(2, null, 0L);
+        ps.setBinaryStream(3, null); // No length
+        ps.setCharacterStream(4, null, 0L);
+        ps.setBlob(5, (InputStream) null, 0L);
+
+        rowsAffected = ps.executeUpdate();
+        assertEquals(1, rowsAffected);
+
+        // Verify null inputs
+        selectPs.setInt(1, 3);
+        rs = selectPs.executeQuery();
+        assertTrue(rs.next());
+        assertNull(rs.getString("text_val"));
+        assertNull(rs.getClob("clob_val"));
+        assertNull(rs.getNClob("nclob_val"));
+        assertNull(rs.getNString("nstring_val"));
+        assertNull(rs.getBytes("blob_val"));
+        assertFalse(rs.next());
+        rs.close();
+
+        // Test error handling for invalid streams
+        var invalidStream = new InputStream() {
+          @Override public int read() throws IOException {
+            throw new IOException("Read error");
+          }
+        };
+        try {
+          ps.setUnicodeStream(1, invalidStream, 10);
+          fail("Expected SQLException for invalid Unicode stream");
+        } catch (SQLException e) {
+          assertEquals(SqlStateInvalidParam, e.getSQLState());
+        }
+        try {
+          ps.setAsciiStream(1, invalidStream, 10L);
+          fail("Expected SQLException for invalid ASCII stream");
+        } catch (SQLException e) {
+          assertEquals(SqlStateInvalidParam, e.getSQLState());
+        }
+        try {
+          ps.setBinaryStream(1, invalidStream, 10L);
+          fail("Expected SQLException for invalid binary stream");
+        } catch (SQLException e) {
+          assertEquals(SqlStateInvalidParam, e.getSQLState());
+        }
+
+        var invalidReader = new Reader() {
+          @Override public int read(char[] cbuf, int off, int len) throws IOException {
+            throw new IOException("Read error");
+          }
+          @Override public void close() {}
+        };
+        try {
+          ps.setCharacterStream(1, invalidReader, 10L);
+          fail("Expected SQLException for invalid character stream");
+        } catch (SQLException e) {
+          assertEquals(SqlStateInvalidParam, e.getSQLState());
+        }
+        try {
+          ps.setClob(1, invalidReader, 10L);
+          fail("Expected SQLException for invalid CLOB");
+        } catch (SQLException e) {
+          assertEquals(SqlStateInvalidParam, e.getSQLState());
+        }
+        try {
+          ps.setNClob(1, invalidReader, 10L);
+          fail("Expected SQLException for invalid NCLOB");
+        } catch (SQLException e) {
+          assertEquals(SqlStateInvalidParam, e.getSQLState());
+        }
+
+        ps.close();
+        selectPs.close();
+      });
+
+      it("Tests L4Ps setObject with target SQL type and scale/length", () -> {
+        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
+        setupTestTable(rq);
+        var insertSql = "INSERT INTO ps_test_data (" +
+          "num_val, int_val, text_val, bool_val, blob_val, date_val, ts_val" +
+          ") VALUES (?, ?, ?, ?, ?, ?, ?)";
+        var ps = new L4Ps(rq, insertSql);
+
+        // Test data
+        var numericVal = new BigDecimal("123.45678");
+        var intVal = 42;
+        var textVal = "Test string";
+        var boolVal = true;
+        var blobData = "BLOB data".getBytes(StandardCharsets.UTF_8);
+        var dateVal = Date.valueOf("2023-10-15");
+        var timestampVal = Timestamp.valueOf("2023-10-15 14:30:00.0");
+
+        // Set parameters using setObject with target SQL type and scale/length
+        ps.setObject(1, numericVal, Types.NUMERIC, 2); // Scale to 2 decimal places
+        ps.setObject(2, intVal, Types.INTEGER, 0);
+        ps.setObject(3, textVal, Types.VARCHAR, textVal.length());
+        ps.setObject(4, boolVal, Types.BOOLEAN, 0);
+        ps.setObject(5, blobData, Types.BLOB, 0);
+        ps.setObject(6, dateVal, Types.DATE, 0);
+        ps.setObject(7, timestampVal, Types.TIMESTAMP, 0);
+
+        // Execute update
+        int rowsAffected = ps.executeUpdate();
+        assertEquals(1, rowsAffected);
+
+        // Verify inserted data
+        var selectPs = new L4Ps(rq, "SELECT num_val, int_val, text_val, bool_val, blob_val, date_val, ts_val FROM ps_test_data WHERE id = ?");
+        selectPs.setInt(1, 1);
+        var rs = selectPs.executeQuery();
+        assertTrue(rs.next());
+        assertEquals(new BigDecimal("123.46"), rs.getBigDecimal("num_val", 2)); // Rounded to 2 decimal places
+        assertEquals(42, rs.getInt("int_val"));
+        assertEquals(textVal, rs.getString("text_val"));
+        assertTrue(rs.getBoolean("bool_val"));
+        assertArrayEquals(blobData, rs.getBytes("blob_val"));
+        assertEquals(Date.valueOf("2023-10-13").toString(), rs.getDate("date_val").toString());
+        assertEquals(Timestamp.valueOf("2023-10-15 10:30:00.0").toString(), rs.getTimestamp("ts_val").toString());
+        assertFalse(rs.next());
+        rs.close();
+
+        // Test null input
+        ps.clearParameters();
+        ps.setObject(1, null, Types.NUMERIC, 2);
+        ps.setObject(2, null, Types.INTEGER, 0);
+        ps.setObject(3, null, Types.VARCHAR, 0);
+        ps.setObject(4, null, Types.BOOLEAN, 0);
+        ps.setObject(5, null, Types.BLOB, 0);
+        ps.setObject(6, null, Types.DATE, 0);
+        ps.setObject(7, null, Types.TIMESTAMP, 0);
+
+        rowsAffected = ps.executeUpdate();
+        assertEquals(1, rowsAffected);
+
+        // Verify null values
+        selectPs.setInt(1, 2);
+        rs = selectPs.executeQuery();
+        assertTrue(rs.next());
+        assertNull(rs.getBigDecimal("num_val"));
+        assertTrue(rs.wasNull());
+        assertEquals(0, rs.getInt("int_val"));
+        assertTrue(rs.wasNull());
+        assertNull(rs.getString("text_val"));
+        assertFalse(rs.getBoolean("bool_val"));
+        assertTrue(rs.wasNull());
+        assertNull(rs.getBytes("blob_val"));
+        assertNull(rs.getDate("date_val"));
+        assertNull(rs.getTimestamp("ts_val"));
+        assertFalse(rs.next());
+        rs.close();
+
+        // Test different input types for the same target type
+        ps.clearParameters();
+        ps.setObject(1, "456.789", Types.NUMERIC, 1); // String to NUMERIC
+        ps.setObject(2, "100", Types.INTEGER, 0); // String to INTEGER
+        ps.setObject(3, 123, Types.VARCHAR, 0); // Integer to VARCHAR
+        ps.setObject(4, "true", Types.BOOLEAN, 0); // String to BOOLEAN
+        ps.setObject(5, blobData, Types.BLOB, 0); // byte[] to BLOB
+        ps.setObject(6, "2023-11-01", Types.DATE, 0); // String to DATE
+        ps.setObject(7, "2023-11-01 15:45:00", Types.TIMESTAMP, 0); // String to TIMESTAMP
+
+        rowsAffected = ps.executeUpdate();
+        assertEquals(1, rowsAffected);
+
+        // Verify converted values
+        selectPs.setInt(1, 3);
+        rs = selectPs.executeQuery();
+        assertTrue(rs.next());
+        assertEquals(new BigDecimal("456.8"), rs.getBigDecimal("num_val", 1)); // Rounded to 1 decimal place
+        assertEquals(100, rs.getInt("int_val"));
+        assertEquals("123", rs.getString("text_val"));
+        assertTrue(rs.getBoolean("bool_val"));
+        assertArrayEquals(blobData, rs.getBytes("blob_val"));
+        assertEquals(Date.valueOf("2023-10-30").toString(), rs.getDate("date_val").toString());
+        assertEquals(Timestamp.valueOf("2023-11-01 07:45:00"), rs.getTimestamp("ts_val"));
+        assertFalse(rs.next());
+        rs.close();
+
+        // Test error handling for unsupported SQL type
+        try {
+          ps.setObject(1, "test", Types.ARRAY, 0);
+          fail("Expected SQLException for unsupported SQL type");
+        } catch (SQLException e) {
+          assertEquals(SqlStateInvalidColumn, e.getSQLState());
+        }
+
+        // Test invalid parameter conversion
+        try {
+          ps.setObject(1, "invalid", Types.NUMERIC, 2); // Invalid numeric string
+          fail("Expected SQLException for invalid conversion");
+        } catch (SQLException e) {
+          assertEquals(SqlStateInvalidColumn, e.getSQLState());
+        }
+
+        ps.close();
+        selectPs.close();
       });
     }
   }

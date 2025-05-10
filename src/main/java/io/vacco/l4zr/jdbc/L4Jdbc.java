@@ -275,7 +275,11 @@ public class L4Jdbc {
     throw castError(value, columnIndex, sourceJdbcType, TIME);
   }
 
-  public static Timestamp castTimestamp(String value, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
+  public static Timestamp castTimestamp(Object raw, int columnIndex, int sourceJdbcType, Calendar cal) throws SQLException {
+    if (raw instanceof Timestamp) {
+      return (Timestamp) raw;
+    }
+    var value = raw.toString();
     if (anyOf(sourceJdbcType, VARCHAR, TIMESTAMP, DATE)) {
       try {
         // Try parsing as ISO timestamp (e.g., "2023-10-15T14:30:00Z")
@@ -414,7 +418,7 @@ public class L4Jdbc {
         case NCLOB:     return x.toString();
         case DATE:      return castDate(x.toString(), 1, DATE, null).toString();
         case TIME:      return castTime(x.toString(), 1, TIME, null).toString();
-        case TIMESTAMP: return castTimestamp(x.toString(), 1, TIMESTAMP, null).toString();
+        case TIMESTAMP: return castTimestamp(x, 1, TIMESTAMP, null).toString();
         case DATALINK:  return castURL(x.toString(), 1, DATALINK).toString();
         case BLOB:
           if (x instanceof byte[]) {

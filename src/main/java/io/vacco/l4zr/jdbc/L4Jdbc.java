@@ -393,30 +393,66 @@ public class L4Jdbc {
     }
   }
 
+  public static Object convertParameter(Object x, int targetSqlType) throws SQLException {
+    if (x == null) {
+      return null;
+    }
+    try {
+      switch (targetSqlType) {
+        case BOOLEAN:   return castBoolean(x.toString(), 1, VARCHAR) ? 1 : 0;
+        case TINYINT:   return castByte(x.toString(), 1, TINYINT);
+        case SMALLINT:  return castShort(x.toString(), 1, SMALLINT);
+        case INTEGER:   return castInteger(x.toString(), 1, INTEGER);
+        case BIGINT:    return castLong(x.toString(), 1, BIGINT);
+        case FLOAT:     return castFloat(x.toString(), 1, FLOAT);
+        case DOUBLE:    return castDouble(x.toString(), 1, DOUBLE);
+        case NUMERIC:
+        case DECIMAL:   return castBigDecimal(x.toString(), 1, NUMERIC, -1).toString();
+        case VARCHAR:
+        case NVARCHAR:
+        case CLOB:
+        case NCLOB:     return x.toString();
+        case DATE:      return castDate(x.toString(), 1, DATE, null).toString();
+        case TIME:      return castTime(x.toString(), 1, TIME, null).toString();
+        case TIMESTAMP: return castTimestamp(x.toString(), 1, TIMESTAMP, null).toString();
+        case DATALINK:  return castURL(x.toString(), 1, DATALINK).toString();
+        case BLOB:
+          if (x instanceof byte[]) {
+            return Base64.getEncoder().encodeToString((byte[]) x);
+          }
+          throw badParam("Invalid BLOB data");
+        default:
+          throw notSupported(format("Unsupported SQL type: [%s]", targetSqlType));
+      }
+    } catch (Exception e) {
+      throw badParam(e);
+    }
+  }
+
   public static int getJdbcType(String rqliteType) {
     if (rqliteType == null) {
       throw new IllegalArgumentException("type cannot be null");
     }
     var rqType = rqliteType.trim().toUpperCase();
     switch (rqType) {
-      case RQ_INTEGER:    return Types.INTEGER;
-      case RQ_NUMERIC:    return Types.NUMERIC;
-      case RQ_BOOLEAN:    return Types.BOOLEAN;
-      case RQ_TINYINT:    return Types.TINYINT;
-      case RQ_SMALLINT:   return Types.SMALLINT;
-      case RQ_BIGINT:     return Types.BIGINT;
-      case RQ_FLOAT:      return Types.FLOAT;
-      case RQ_DOUBLE:     return Types.DOUBLE;
-      case RQ_VARCHAR:    return Types.VARCHAR;
-      case RQ_DATE:       return Types.DATE;
-      case RQ_TIME:       return Types.TIME;
-      case RQ_TIMESTAMP:  return Types.TIMESTAMP;
-      case RQ_DATALINK:   return Types.DATALINK;
-      case RQ_CLOB:       return Types.CLOB;
-      case RQ_NCLOB:      return Types.NCLOB;
-      case RQ_NVARCHAR:   return Types.NVARCHAR;
-      case RQ_BLOB:       return Types.BLOB;
-      case RQ_NULL:       return Types.NULL;
+      case RQ_INTEGER:    return INTEGER;
+      case RQ_NUMERIC:    return NUMERIC;
+      case RQ_BOOLEAN:    return BOOLEAN;
+      case RQ_TINYINT:    return TINYINT;
+      case RQ_SMALLINT:   return SMALLINT;
+      case RQ_BIGINT:     return BIGINT;
+      case RQ_FLOAT:      return FLOAT;
+      case RQ_DOUBLE:     return DOUBLE;
+      case RQ_VARCHAR:    return VARCHAR;
+      case RQ_DATE:       return DATE;
+      case RQ_TIME:       return TIME;
+      case RQ_TIMESTAMP:  return TIMESTAMP;
+      case RQ_DATALINK:   return DATALINK;
+      case RQ_CLOB:       return CLOB;
+      case RQ_NCLOB:      return NCLOB;
+      case RQ_NVARCHAR:   return NVARCHAR;
+      case RQ_BLOB:       return BLOB;
+      case RQ_NULL:       return NULL;
       default: return -1;
     }
   }

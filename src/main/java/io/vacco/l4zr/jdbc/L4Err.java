@@ -177,12 +177,12 @@ public class L4Err {
     );
   }
 
-  public static SQLException badParam(Exception e) {
-    return new SQLException(e.getMessage(), SqlStateInvalidParam, e);
+  public static SQLException badParam(String msg) {
+    return new SQLException(msg, SqlStateInvalidParam);
   }
 
-  public static SQLException badAttr(Exception e) {
-    return new SQLException(e.getMessage(), SqlStateInvalidAttr, e);
+  public static SQLException badParam(Exception e) {
+    return new SQLException(e.getMessage(), SqlStateInvalidParam, e);
   }
 
   public static SQLException badInterface() {
@@ -195,6 +195,10 @@ public class L4Err {
 
   public static SQLException badStatement() {
     return new SQLException("SQL statement cannot be null or empty", SqlStateInvalidQuery);
+  }
+
+  public static SQLException badQuery(String msg) {
+    return new SQLException(msg, SqlStateInvalidQuery);
   }
 
   public static SQLException badQuery(Exception e) {

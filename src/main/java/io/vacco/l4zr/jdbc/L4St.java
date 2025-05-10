@@ -9,17 +9,17 @@ import static io.vacco.l4zr.jdbc.L4Err.*;
 
 public class L4St implements Statement {
 
-  protected final L4Client client;
+  protected final L4Client          client;
   protected final List<L4Statement> batch = new ArrayList<>();
 
-  protected boolean isClosed = false;
-  protected L4Rs    currentResultSet = null;
-  protected int     maxRows = -1;
-  protected int     fetchSize = 0;
+  protected boolean         isClosed = false;
+  protected L4Rs            currentResultSet = null;
+  protected List<L4Result>  results = new ArrayList<>();
+  protected int             maxRows = -1;
+  protected int             fetchSize = 0;
 
-  private boolean closeOnCompletion = false;
-  private List<L4Result> results = new ArrayList<>();
-  private int currentResultIndex = -1;
+  protected boolean closeOnCompletion = false;
+  protected int   currentResultIndex = -1;
 
   public L4St(L4Client client) {
     this.client = Objects.requireNonNull(client);
@@ -283,8 +283,7 @@ public class L4St implements Statement {
     }
   }
 
-  @Override
-  public Connection getConnection() throws SQLException {
+  @Override public Connection getConnection() throws SQLException {
     return null;
   }
 

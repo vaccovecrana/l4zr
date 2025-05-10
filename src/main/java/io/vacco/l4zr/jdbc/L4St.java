@@ -25,16 +25,6 @@ public class L4St implements Statement {
     this.client = Objects.requireNonNull(client);
   }
 
-  public void tryRun(L4Block b) throws SQLException {
-    try {
-      b.tryRun();
-    } catch (IllegalArgumentException e) {
-      throw badParam(e);
-    } catch (Exception e) {
-      throw badAttr(e);
-    }
-  }
-
   protected void checkClosed() throws SQLException {
     if (isClosed) {
       throw stClosed();

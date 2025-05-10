@@ -42,10 +42,6 @@ public class L4Rs implements ResultSet {
     return this;
   }
 
-  public int getUpdateCount() {
-    return result.rowsAffected == null ? -1 : result.rowsAffected;
-  }
-
   @Override public boolean next() throws SQLException {
     checkClosed();
     if (currentRow + 1 < result.values.size()) {

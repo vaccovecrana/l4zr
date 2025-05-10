@@ -8,6 +8,9 @@ import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+import static io.vacco.l4zr.jdbc.L4Err.badAttr;
+import static io.vacco.l4zr.jdbc.L4Err.badParam;
+
 public class L4Ps extends L4St implements PreparedStatement {
 
   private final L4Statement statement;
@@ -19,6 +22,16 @@ public class L4Ps extends L4St implements PreparedStatement {
   public L4Ps(L4Client client) {
     super(client);
     this.statement = null;
+  }
+
+  public void tryRun(L4Block b) throws SQLException {
+    try {
+      b.tryRun();
+    } catch (IllegalArgumentException e) {
+      throw badParam(e);
+    } catch (Exception e) {
+      throw badAttr(e);
+    }
   }
 
   @Override

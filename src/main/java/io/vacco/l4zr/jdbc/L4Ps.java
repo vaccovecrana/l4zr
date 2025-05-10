@@ -15,7 +15,7 @@ import static io.vacco.l4zr.jdbc.L4Jdbc.*;
 
 public class L4Ps extends L4St implements PreparedStatement {
 
-  private final L4Statement statement;
+  private L4Statement statement;
   private boolean resultSetAvailable = false;
 
   public L4Ps(L4Client client, String sql) throws SQLException {
@@ -85,7 +85,8 @@ public class L4Ps extends L4St implements PreparedStatement {
 
   @Override public void addBatch() throws SQLException {
     checkClosed();
-    batch.add(new L4Statement().sql(statement.sql));
+    batch.add(statement);
+    statement = new L4Statement().sql(statement.sql);
   }
 
   @Override public int[] executeBatch() throws SQLException {
@@ -322,7 +323,7 @@ public class L4Ps extends L4St implements PreparedStatement {
       return;
     }
     if (cal != null) {
-      var instant = x.toInstant().atZone(cal.getTimeZone().toZoneId());
+      var instant = x.toLocalDate().atStartOfDay().atZone(cal.getTimeZone().toZoneId());
       statement.withPositionalParam(parameterIndex - 1, instant.toLocalDate().toString());
     } else {
       statement.withPositionalParam(parameterIndex - 1, x.toString());

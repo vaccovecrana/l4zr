@@ -56,12 +56,12 @@ public class L4RsTest {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq);
 
-        var dr = rq.executeSingle("DROP TABLE test_data");
+        var dr = rq.executeSingle("DROP TABLE rs_test_data");
         assertEquals(200, dr.statusCode);
 
         // Create table with diverse data types
         var createTable = join("\n", "",
-          "CREATE TABLE test_data (",
+          "CREATE TABLE rs_test_data (",
           "  id INTEGER PRIMARY KEY AUTOINCREMENT,",
           "  num_val NUMERIC,",
           "  bool_val BOOLEAN,", // For BOOLEAN (0/1)
@@ -85,7 +85,7 @@ public class L4RsTest {
         var res0 = rq.executeSingle(createTable);
         assertEquals(200, res0.statusCode);
 
-        var resP = rq.querySingle("PRAGMA table_info(test_data)");
+        var resP = rq.querySingle("PRAGMA table_info(rs_test_data)");
         for (var result : resP.results) {
           System.out.println(result.columns);
           System.out.println(result.types);
@@ -96,7 +96,7 @@ public class L4RsTest {
 
         // Insert test data: valid values and NULLs
         var insertSql = join("", "",
-          "INSERT INTO test_data (",
+          "INSERT INTO rs_test_data (",
           "  num_val, bool_val, tiny_val, small_val, int_val, big_val, float_val, double_val,",
           "  text_val, date_val, time_val, ts_val, url_val, clob_val, nclob_val, nstring_val, blob_val",
           ") VALUES (",
@@ -147,7 +147,7 @@ public class L4RsTest {
         assertEquals(200, res2.statusCode);
 
         // Query data and test L4Rs
-        var res3 = rq.querySingle("SELECT * FROM test_data");
+        var res3 = rq.querySingle("SELECT * FROM rs_test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
         var rs = new L4Rs(result, stmt);
@@ -360,7 +360,7 @@ public class L4RsTest {
       it("Tests L4Rs navigation and state methods", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq);
-        var res3 = rq.querySingle("SELECT * FROM test_data");
+        var res3 = rq.querySingle("SELECT * FROM rs_test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
         var rs = new L4Rs(result, stmt);
@@ -410,7 +410,7 @@ public class L4RsTest {
       it("Tests L4Rs unsupported operations and error handling", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq);
-        var res3 = rq.querySingle("SELECT * FROM test_data");
+        var res3 = rq.querySingle("SELECT * FROM rs_test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
         var rs = new L4Rs(result, stmt);
@@ -559,7 +559,7 @@ public class L4RsTest {
       it("Tests L4Rs with empty ResultSet", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq);
-        var res = rq.querySingle("SELECT * FROM test_data WHERE id = 999");
+        var res = rq.querySingle("SELECT * FROM rs_test_data WHERE id = 999");
         assertEquals(200, res.statusCode);
         var result = res.results.get(0);
         var rs = new L4Rs(result, stmt);
@@ -589,7 +589,7 @@ public class L4RsTest {
       it("Tests L4Rs with invalid column index and edge cases", () -> {
         var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq);
-        var res3 = rq.querySingle("SELECT * FROM test_data");
+        var res3 = rq.querySingle("SELECT * FROM rs_test_data");
         assertEquals(200, res3.statusCode);
         var result = res3.results.get(0);
         var rs = new L4Rs(result, stmt);

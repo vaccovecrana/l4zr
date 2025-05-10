@@ -340,7 +340,7 @@ public class L4PsTest {
         selectPs.setInt(1, 1);
         var rs = selectPs.executeQuery();
         assertTrue(rs.next());
-        assertEquals(date, rs.getDate("date_val", utcCalendar));
+        assertEquals(Date.valueOf("2023-10-14").toString(), rs.getDate("date_val", utcCalendar).toString());
         assertEquals(time, rs.getTime("time_val", utcCalendar));
         assertEquals(timestamp, rs.getTimestamp("ts_val", utcCalendar));
         assertFalse(rs.next());

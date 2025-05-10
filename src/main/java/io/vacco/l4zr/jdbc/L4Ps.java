@@ -8,6 +8,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.sql.Date;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 
 import static io.vacco.l4zr.jdbc.L4Err.*;
@@ -323,10 +325,17 @@ public class L4Ps extends L4St implements PreparedStatement {
       return;
     }
     if (cal != null) {
-      var instant = x.toLocalDate().atStartOfDay().atZone(cal.getTimeZone().toZoneId());
-      statement.withPositionalParam(parameterIndex - 1, instant.toLocalDate().toString());
+      // Convert Date to LocalDate in the Calendar's timezone
+      var calInstance = (Calendar) cal.clone(); // Clone to avoid mutating the original
+      calInstance.setTimeInMillis(x.getTime());
+      var localDate = LocalDate.of(
+        calInstance.get(Calendar.YEAR),
+        calInstance.get(Calendar.MONTH) + 1, // Calendar months are 0-based
+        calInstance.get(Calendar.DAY_OF_MONTH)
+      );
+      statement.withPositionalParam(parameterIndex - 1, localDate.toString()); // Format: YYYY-MM-DD
     } else {
-      statement.withPositionalParam(parameterIndex - 1, x.toString());
+      statement.withPositionalParam(parameterIndex - 1, x.toString()); // Format: YYYY-MM-DD
     }
   }
 
@@ -337,10 +346,17 @@ public class L4Ps extends L4St implements PreparedStatement {
       return;
     }
     if (cal != null) {
-      var instant = x.toInstant().atZone(cal.getTimeZone().toZoneId());
-      statement.withPositionalParam(parameterIndex - 1, instant.toLocalTime().toString());
+      // Convert Time to LocalTime in the Calendar's timezone
+      var calInstance = (Calendar) cal.clone(); // Clone to avoid mutating the original
+      calInstance.setTimeInMillis(x.getTime());
+      var localTime = LocalTime.of(
+        calInstance.get(Calendar.HOUR_OF_DAY),
+        calInstance.get(Calendar.MINUTE),
+        calInstance.get(Calendar.SECOND)
+      );
+      statement.withPositionalParam(parameterIndex - 1, localTime.toString()); // Format: HH:MM:SS
     } else {
-      statement.withPositionalParam(parameterIndex - 1, x.toString());
+      statement.withPositionalParam(parameterIndex - 1, x.toString()); // Format: HH:MM:SS
     }
   }
 

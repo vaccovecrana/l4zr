@@ -3,6 +3,7 @@ package io.vacco.l4zr.rqlite;
 import io.vacco.l4zr.json.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static io.vacco.l4zr.rqlite.L4Json.*;
 
@@ -25,6 +26,12 @@ public class L4Result {
       this.lastInsertId = json.get("last_insert_id") != null ? json.getLong("last_insert_id", -1) : null;
       this.rowsAffected = json.get("rows_affected") != null ? json.getInt("rows_affected", -1) : null;
     }
+  }
+
+  public L4Result(List<String> columns, List<String> types, List<List<String>> values) {
+    this.columns = Objects.requireNonNull(columns);
+    this.types = Objects.requireNonNull(types);
+    this.values = Objects.requireNonNull(values);
   }
 
   public boolean isError() {

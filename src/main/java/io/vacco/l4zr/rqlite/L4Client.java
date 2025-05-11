@@ -12,6 +12,7 @@ import static java.lang.String.format;
 public class L4Client {
 
   private final HttpClient httpClient;
+  private final String baseUrl;
   private final String executeURL;
   private final String queryURL;
   private final String statusURL;
@@ -22,6 +23,7 @@ public class L4Client {
   private String basicAuthPass = "";
 
   public L4Client(String baseURL, HttpClient client) {
+    this.baseUrl = Objects.requireNonNull(baseURL);
     this.executeURL = baseURL + "/db/execute";
     this.queryURL = baseURL + "/db/query";
     this.statusURL = baseURL + "/status";
@@ -133,6 +135,10 @@ public class L4Client {
 
   public long getTxTimeoutSec() {
     return L4Options.timeoutSec;
+  }
+
+  public String getBaseUrl() {
+    return baseUrl;
   }
 
 }

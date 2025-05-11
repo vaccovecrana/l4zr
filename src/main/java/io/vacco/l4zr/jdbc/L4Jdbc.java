@@ -473,6 +473,33 @@ public class L4Jdbc {
     }
   }
 
+  public static int getJdbcTypePrecision(String rqliteType) {
+    if (rqliteType == null || RQ_NULL.equalsIgnoreCase(rqliteType)) {
+      return 0; // NULL or unknown
+    }
+    var typeUpper = rqliteType.toUpperCase();
+    switch (typeUpper) {
+      case RQ_INTEGER:    return 10;     // 32-bit integer (approx 10 digits)
+      case RQ_NUMERIC:    return 38;     // Arbitrary precision, conservative estimate
+      case RQ_BOOLEAN:    return 1;      // 0 or 1
+      case RQ_TINYINT:    return 3;      // 3 digits (-128 to 127)
+      case RQ_SMALLINT:   return 5;      // 5 digits (-32768 to 32767)
+      case RQ_BIGINT:     return 19;     // 64-bit integer (approx 19 digits)
+      case RQ_FLOAT:      return 7;      // Single-precision (approx 7 digits)
+      case RQ_DOUBLE:     return 15;     // Double-precision (approx 15 digits)
+      case RQ_VARCHAR:    return 255;    // Arbitrary, conservative default
+      case RQ_DATE:       return 10;     // "YYYY-MM-DD"
+      case RQ_TIME:       return 8;      // "HH:MM:SS"
+      case RQ_TIMESTAMP:  return 19;     // "YYYY-MM-DD HH:MM:SS"
+      case RQ_DATALINK:   return 255;    // URL, conservative default
+      case RQ_CLOB:       return 65535;  // Large text
+      case RQ_NCLOB:      return 65535;  // Large national text
+      case RQ_NVARCHAR:   return 255;    // National text, conservative default
+      case RQ_BLOB:       return 65535;  // Binary data, conservative default
+      default:            return 0;      // Fallback for unknown types
+    }
+  }
+
   public static boolean isSelect(String rawSql) {
     if (rawSql == null || rawSql.trim().isEmpty()) {
       return false;

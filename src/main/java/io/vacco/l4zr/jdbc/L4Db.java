@@ -4,7 +4,7 @@ import io.vacco.l4zr.rqlite.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
-import static java.lang.String.format;
+import static java.lang.String.*;
 import static java.util.stream.Collectors.toList;
 
 public class L4Db {
@@ -31,31 +31,35 @@ public class L4Db {
     return Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(value).matches();
   }
 
-  public L4Result getTables(String catalog, String tableNamePattern, String[] types) {
-    var typeSet = types == null
-        ? new HashSet<>(Arrays.asList(TABLE, VIEW))
-        : new HashSet<>(Arrays.asList(types));
+  public L4Result getTables(String catalog, String tableNamePattern,
+                            String schemaPattern, String[] types) {
+    var typeSet = types == null ? new HashSet<>(Arrays.asList(TABLE, VIEW)) : new HashSet<>(Arrays.asList(types));
     var typeFilter = "";
     if (!typeSet.contains(TABLE) && typeSet.contains(VIEW)) {
       typeFilter = " WHERE type = 'view'";
     } else if (typeSet.contains(TABLE) && !typeSet.contains(VIEW)) {
       typeFilter = " WHERE type = 'table'";
     }
-    var sql = format(
-        "SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, name AS TABLE_NAME, " +
-            "type AS TABLE_TYPE, NULL AS REMARKS, NULL AS TYPE_CAT, NULL AS TYPE_SCHEM, " +
-            "NULL AS TYPE_NAME, NULL AS SELF_REFERENCING_COL_NAME, NULL AS REF_GENERATION " +
-            "FROM sqlite_master%s " +
-            "WHERE name LIKE '%s' AND (type = 'table' OR type = 'view')",
-        typeFilter, tableNamePattern == null ? "%" : tableNamePattern.replace("'", "''")
+    var sql = join("\n", "",
+      "SELECT ",
+      " NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, name AS TABLE_NAME, ",
+      " type AS TABLE_TYPE, NULL AS REMARKS, NULL AS TYPE_CAT, NULL AS TYPE_SCHEM, ",
+      " NULL AS TYPE_NAME, NULL AS SELF_REFERENCING_COL_NAME, NULL AS REF_GENERATION ",
+      "FROM sqlite_master%s ",
+      "WHERE name LIKE '%s' AND (type = 'table' OR type = 'view')"
     );
+    tableNamePattern = tableNamePattern == null ? "%" : tableNamePattern.replace("'", "''");
+    sql = format(sql, typeFilter, tableNamePattern);
     var response = client.query(new L4Statement().sql(sql));
     var res = response.results.get(0);
-    // Filter by catalog (database name) if specified
     if (catalog != null && !catalog.isEmpty()) {
       res.values = res.values.stream()
         .filter(row -> matchesPattern(catalog, res.get(TABLE_CAT, row)))
         .collect(toList());
+    }
+    // SQLite does not support schemas or catalogs, treat catalog as database name
+    if (schemaPattern != null && !schemaPattern.isEmpty()) {
+      res.values.clear();
     }
     return res;
   }

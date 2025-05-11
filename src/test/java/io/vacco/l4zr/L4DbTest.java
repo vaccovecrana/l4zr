@@ -20,8 +20,8 @@ public class L4DbTest {
     if (!GraphicsEnvironment.isHeadless()) {
       it("Retrieves basic DB metadata", () -> {
         var db = new L4Db(rq);
-        var res = db.getTables(null, null, null);
-        res.print(System.out);
+        db.getTables(null, null, null, null).print(System.out);
+        db.getTables(null, null, "momo", null).print(System.out);
       });
     }
   }

@@ -67,44 +67,44 @@ public class L4RsMeta implements ResultSetMetaData {
   @Override public boolean isSigned(int column) throws SQLException {
     checkColumn(column, result);
     var type = result.types.get(column - 1);
-    if (type == null || L4Jdbc.RQ_NULL.equalsIgnoreCase(type)) {
+    if (type == null || RQ_NULL.equalsIgnoreCase(type)) {
       return false; // NULL or unknown
     }
     var typeUpper = type.toUpperCase();
-    return typeUpper.equals(L4Jdbc.RQ_INTEGER)
-      || typeUpper.equals(L4Jdbc.RQ_NUMERIC)
-      || typeUpper.equals(L4Jdbc.RQ_TINYINT)
-      || typeUpper.equals(L4Jdbc.RQ_SMALLINT)
-      || typeUpper.equals(L4Jdbc.RQ_BIGINT)
-      || typeUpper.equals(L4Jdbc.RQ_FLOAT)
-      || typeUpper.equals(L4Jdbc.RQ_DOUBLE);
+    return typeUpper.equals(RQ_INTEGER)
+      || typeUpper.equals(RQ_NUMERIC)
+      || typeUpper.equals(RQ_TINYINT)
+      || typeUpper.equals(RQ_SMALLINT)
+      || typeUpper.equals(RQ_BIGINT)
+      || typeUpper.equals(RQ_FLOAT)
+      || typeUpper.equals(RQ_DOUBLE);
   }
 
   @Override public int getColumnDisplaySize(int column) throws SQLException {
     checkColumn(column, result);
     var type = result.types.get(column - 1);
-    if (type == null || L4Jdbc.RQ_NULL.equalsIgnoreCase(type)) {
+    if (type == null || RQ_NULL.equalsIgnoreCase(type)) {
       return 4; // "NULL"
     }
     var typeUpper = type.toUpperCase();
     switch (typeUpper) {
-      case L4Jdbc.RQ_INTEGER:    return 11;   // -2147483648 to 2147483647
-      case L4Jdbc.RQ_NUMERIC:    return 38;   // Arbitrary precision, conservative estimate
-      case L4Jdbc.RQ_BOOLEAN:    return 5;    // "true" or "false"
-      case L4Jdbc.RQ_TINYINT:    return 4;    // -128 to 127
-      case L4Jdbc.RQ_SMALLINT:   return 6;    // -32768 to 32767
-      case L4Jdbc.RQ_BIGINT:     return 20;   // -2^63 to 2^63-1
-      case L4Jdbc.RQ_FLOAT:      return 25;   // Scientific notation, e.g., -1.2345678E123
-      case L4Jdbc.RQ_DOUBLE:     return 25;   // Scientific notation, e.g., -1.234567890123456E123
-      case L4Jdbc.RQ_VARCHAR:    return 255;  // Arbitrary, conservative default
-      case L4Jdbc.RQ_DATE:       return 10;   // "YYYY-MM-DD"
-      case L4Jdbc.RQ_TIME:       return 8;    // "HH:MM:SS"
-      case L4Jdbc.RQ_TIMESTAMP:  return 19;   // "YYYY-MM-DD HH:MM:SS"
-      case L4Jdbc.RQ_DATALINK:   return 255;  // URL, conservative default
-      case L4Jdbc.RQ_CLOB:       return 255;  // Large text, conservative default
-      case L4Jdbc.RQ_NCLOB:      return 255;  // Large national text
-      case L4Jdbc.RQ_NVARCHAR:   return 255;  // National text, conservative default
-      case L4Jdbc.RQ_BLOB:       return 255;  // Binary data, conservative default
+      case RQ_INTEGER:    return 11;   // -2147483648 to 2147483647
+      case RQ_NUMERIC:    return 38;   // Arbitrary precision, conservative estimate
+      case RQ_BOOLEAN:    return 5;    // "true" or "false"
+      case RQ_TINYINT:    return 4;    // -128 to 127
+      case RQ_SMALLINT:   return 6;    // -32768 to 32767
+      case RQ_BIGINT:     return 20;   // -2^63 to 2^63-1
+      case RQ_FLOAT:      return 25;   // Scientific notation, e.g., -1.2345678E123
+      case RQ_DOUBLE:     return 25;   // Scientific notation, e.g., -1.234567890123456E123
+      case RQ_VARCHAR:    return 255;  // Arbitrary, conservative default
+      case RQ_DATE:       return 10;   // "YYYY-MM-DD"
+      case RQ_TIME:       return 8;    // "HH:MM:SS"
+      case RQ_TIMESTAMP:  return 19;   // "YYYY-MM-DD HH:MM:SS"
+      case RQ_DATALINK:   return 255;  // URL, conservative default
+      case RQ_CLOB:       return 255;  // Large text, conservative default
+      case RQ_NCLOB:      return 255;  // Large national text
+      case RQ_NVARCHAR:   return 255;  // National text, conservative default
+      case RQ_BLOB:       return 255;  // Binary data, conservative default
       default:                   return 4;    // Fallback for unknown types
     }
   }
@@ -128,31 +128,7 @@ public class L4RsMeta implements ResultSetMetaData {
 
   @Override public int getPrecision(int column) throws SQLException {
     checkColumn(column, result);
-    var type = result.types.get(column - 1);
-    if (type == null || L4Jdbc.RQ_NULL.equalsIgnoreCase(type)) {
-      return 0; // NULL or unknown
-    }
-    var typeUpper = type.toUpperCase();
-    switch (typeUpper) {
-      case L4Jdbc.RQ_INTEGER:    return 10;     // 32-bit integer (approx 10 digits)
-      case L4Jdbc.RQ_NUMERIC:    return 38;     // Arbitrary precision, conservative estimate
-      case L4Jdbc.RQ_BOOLEAN:    return 1;      // 0 or 1
-      case L4Jdbc.RQ_TINYINT:    return 3;      // 3 digits (-128 to 127)
-      case L4Jdbc.RQ_SMALLINT:   return 5;      // 5 digits (-32768 to 32767)
-      case L4Jdbc.RQ_BIGINT:     return 19;     // 64-bit integer (approx 19 digits)
-      case L4Jdbc.RQ_FLOAT:      return 7;      // Single-precision (approx 7 digits)
-      case L4Jdbc.RQ_DOUBLE:     return 15;     // Double-precision (approx 15 digits)
-      case L4Jdbc.RQ_VARCHAR:    return 255;    // Arbitrary, conservative default
-      case L4Jdbc.RQ_DATE:       return 10;     // "YYYY-MM-DD"
-      case L4Jdbc.RQ_TIME:       return 8;      // "HH:MM:SS"
-      case L4Jdbc.RQ_TIMESTAMP:  return 19;     // "YYYY-MM-DD HH:MM:SS"
-      case L4Jdbc.RQ_DATALINK:   return 255;    // URL, conservative default
-      case L4Jdbc.RQ_CLOB:       return 65535;  // Large text
-      case L4Jdbc.RQ_NCLOB:      return 65535;  // Large national text
-      case L4Jdbc.RQ_NVARCHAR:   return 255;    // National text, conservative default
-      case L4Jdbc.RQ_BLOB:       return 65535;  // Binary data, conservative default
-      default:                   return 0;      // Fallback for unknown types
-    }
+    return getJdbcTypePrecision(result.types.get(column - 1));
   }
 
   /* SQLite types have no fixed decimal places. */
@@ -215,28 +191,28 @@ public class L4RsMeta implements ResultSetMetaData {
   @Override public String getColumnClassName(int column) throws SQLException {
     checkColumn(column, result);
     var type = result.types.get(column - 1);
-    if (type == null || L4Jdbc.RQ_NULL.equalsIgnoreCase(type)) {
+    if (type == null || RQ_NULL.equalsIgnoreCase(type)) {
       return Object.class.getCanonicalName(); // For NULL columns
     }
     var typeUpper = type.toUpperCase();
     switch (typeUpper) {
-      case L4Jdbc.RQ_INTEGER:   return Integer.class.getCanonicalName();
-      case L4Jdbc.RQ_NUMERIC:   return java.math.BigDecimal.class.getCanonicalName();
-      case L4Jdbc.RQ_BOOLEAN:   return Boolean.class.getCanonicalName();
-      case L4Jdbc.RQ_TINYINT:   return Byte.class.getCanonicalName();
-      case L4Jdbc.RQ_SMALLINT:  return Short.class.getCanonicalName();
-      case L4Jdbc.RQ_BIGINT:    return Long.class.getCanonicalName();
-      case L4Jdbc.RQ_FLOAT:     return Float.class.getCanonicalName();
-      case L4Jdbc.RQ_DOUBLE:    return Double.class.getCanonicalName();
-      case L4Jdbc.RQ_VARCHAR:
-      case L4Jdbc.RQ_NVARCHAR:  return String.class.getCanonicalName();
-      case L4Jdbc.RQ_DATE:      return java.sql.Date.class.getCanonicalName();
-      case L4Jdbc.RQ_TIME:      return java.sql.Time.class.getCanonicalName();
-      case L4Jdbc.RQ_TIMESTAMP: return java.sql.Timestamp.class.getCanonicalName();
-      case L4Jdbc.RQ_DATALINK:  return java.net.URL.class.getCanonicalName();
-      case L4Jdbc.RQ_CLOB:      return java.sql.Clob.class.getCanonicalName();
-      case L4Jdbc.RQ_NCLOB:     return java.sql.NClob.class.getCanonicalName();
-      case L4Jdbc.RQ_BLOB:      return byte[].class.getCanonicalName();
+      case RQ_INTEGER:   return Integer.class.getCanonicalName();
+      case RQ_NUMERIC:   return java.math.BigDecimal.class.getCanonicalName();
+      case RQ_BOOLEAN:   return Boolean.class.getCanonicalName();
+      case RQ_TINYINT:   return Byte.class.getCanonicalName();
+      case RQ_SMALLINT:  return Short.class.getCanonicalName();
+      case RQ_BIGINT:    return Long.class.getCanonicalName();
+      case RQ_FLOAT:     return Float.class.getCanonicalName();
+      case RQ_DOUBLE:    return Double.class.getCanonicalName();
+      case RQ_VARCHAR:
+      case RQ_NVARCHAR:  return String.class.getCanonicalName();
+      case RQ_DATE:      return java.sql.Date.class.getCanonicalName();
+      case RQ_TIME:      return java.sql.Time.class.getCanonicalName();
+      case RQ_TIMESTAMP: return java.sql.Timestamp.class.getCanonicalName();
+      case RQ_DATALINK:  return java.net.URL.class.getCanonicalName();
+      case RQ_CLOB:      return java.sql.Clob.class.getCanonicalName();
+      case RQ_NCLOB:     return java.sql.NClob.class.getCanonicalName();
+      case RQ_BLOB:      return byte[].class.getCanonicalName();
       default:                  return Object.class.getCanonicalName();
     }
   }

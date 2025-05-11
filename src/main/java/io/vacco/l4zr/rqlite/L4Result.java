@@ -37,6 +37,11 @@ public class L4Result {
     return -1;
   }
 
+  public void addRow(String ... values) {
+    var row = Arrays.asList(values);
+    this.values.add(row);
+  }
+
   public String get(String col, List<String> row) {
     return row.get(indexOf(col));
   }

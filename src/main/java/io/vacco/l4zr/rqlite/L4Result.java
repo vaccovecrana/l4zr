@@ -1,9 +1,8 @@
 package io.vacco.l4zr.rqlite;
 
 import io.vacco.l4zr.json.JsonObject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.io.PrintStream;
+import java.util.*;
 
 import static io.vacco.l4zr.rqlite.L4Json.*;
 
@@ -28,14 +27,73 @@ public class L4Result {
     }
   }
 
-  public L4Result(List<String> columns, List<String> types, List<List<String>> values) {
-    this.columns = Objects.requireNonNull(columns);
-    this.types = Objects.requireNonNull(types);
-    this.values = Objects.requireNonNull(values);
+  public int indexOf(String column) {
+    for (int i = 0; i < columns.size(); i++) {
+      var name = columns.get(i);
+      if (name.equalsIgnoreCase(column)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  public String get(String col, List<String> row) {
+    return row.get(indexOf(col));
   }
 
   public boolean isError() {
     return error != null;
+  }
+
+  public void print(PrintStream out) {
+    Objects.requireNonNull(out, "PrintStream cannot be null");
+
+    if (isError()) {
+      out.printf("Error: %s%n", error);
+      return;
+    }
+    if (columns == null || columns.isEmpty()) {
+      out.println("No columns available.");
+      return;
+    }
+
+    var maxWidths = new int[columns.size()]; // Calculate max width for each column
+    for (int i = 0; i < columns.size(); i++) {
+      maxWidths[i] = columns.get(i).length();
+      for (List<String> row : values) {
+        String value = row.get(i);
+        maxWidths[i] = Math.max(maxWidths[i], value != null ? value.length() : 4); // 4 for "null"
+      }
+    }
+
+    out.println();
+
+    for (int i = 0; i < columns.size(); i++) { // Print column headers
+      out.printf("| %-" + maxWidths[i] + "s ", columns.get(i));
+    }
+    out.println("|");
+
+    for (int width : maxWidths) { // Print separator
+      out.print("| ");
+      out.print("-".repeat(width));
+      out.print(" ");
+    }
+    out.println("|");
+
+    for (List<String> row : values) { // Print rows
+      for (int i = 0; i < row.size(); i++) {
+        String value = row.get(i) != null ? row.get(i) : "null";
+        out.printf("| %-" + maxWidths[i] + "s ", value);
+      }
+      out.println("|");
+    }
+
+    if (rowsAffected != null) { // Print summary
+      out.printf("%nRows affected: %d%n", rowsAffected);
+    }
+    if (lastInsertId != null) {
+      out.printf("Last insert ID: %d%n", lastInsertId);
+    }
   }
 
 }

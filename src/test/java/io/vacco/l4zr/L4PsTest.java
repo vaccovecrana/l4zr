@@ -14,6 +14,7 @@ import java.sql.*;
 import java.sql.Date;
 import java.util.*;
 
+import static io.vacco.l4zr.L4Tests.*;
 import static io.vacco.l4zr.jdbc.L4Err.*;
 import static j8spec.J8Spec.*;
 import static org.junit.Assert.*;
@@ -22,42 +23,12 @@ import static org.junit.Assert.*;
 @RunWith(J8SpecRunner.class)
 public class L4PsTest {
 
-  // Helper to set up test table
-  private static void setupTestTable(L4Client rq) throws Exception {
-    var dr = rq.executeSingle("DROP TABLE IF EXISTS ps_test_data");
-    assertEquals(200, dr.statusCode);
-
-    var createTable = String.join("\n", "",
-      "CREATE TABLE ps_test_data (",
-      "  id INTEGER PRIMARY KEY AUTOINCREMENT,",
-      "  num_val NUMERIC,",
-      "  bool_val BOOLEAN,",
-      "  tiny_val TINYINT,",
-      "  small_val SMALLINT,",
-      "  int_val INTEGER,",
-      "  big_val BIGINT,",
-      "  float_val FLOAT,",
-      "  double_val DOUBLE,",
-      "  text_val VARCHAR,",
-      "  date_val DATE,",
-      "  time_val TIME,",
-      "  ts_val TIMESTAMP,",
-      "  url_val DATALINK,",
-      "  clob_val CLOB,",
-      "  nclob_val NCLOB,",
-      "  nstring_val NVARCHAR,",
-      "  blob_val BLOB",
-      ")"
-    );
-    var res0 = rq.executeSingle(createTable);
-    assertEquals(200, res0.statusCode);
-  }
+  private static final L4Client rq = L4Tests.localClient();
 
   static {
     if (!GraphicsEnvironment.isHeadless()) {
       it("Tests L4Ps query execution and parameter setting", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var insertSql = "INSERT INTO ps_test_data (" +
           "num_val, bool_val, tiny_val, small_val, int_val, big_val, float_val, double_val, " +
           "text_val, date_val, time_val, ts_val, url_val, clob_val, nclob_val, nstring_val, blob_val" +
@@ -119,8 +90,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps stream and LOB parameter setting", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var insertSql = "INSERT INTO ps_test_data (text_val, clob_val, nclob_val, nstring_val, blob_val) VALUES (?, ?, ?, ?, ?)";
         var ps = new L4Ps(rq, insertSql);
 
@@ -158,8 +128,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps batch execution", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var insertSql = "INSERT INTO ps_test_data (num_val, text_val) VALUES (?, ?)";
         var ps = new L4Ps(rq, insertSql);
 
@@ -197,8 +166,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps metadata retrieval", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var selectSql = "SELECT * FROM ps_test_data WHERE id = ?";
         var ps = new L4Ps(rq, selectSql);
 
@@ -224,8 +192,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps null and object parameter setting", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var insertSql = "INSERT INTO ps_test_data (num_val, text_val, blob_val) VALUES (?, ?, ?)";
         var ps = new L4Ps(rq, insertSql);
 
@@ -253,8 +220,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps advanced stream and LOB methods", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var insertSql = "INSERT INTO ps_test_data (text_val, clob_val, nclob_val, nstring_val, blob_val) VALUES (?, ?, ?, ?, ?)";
         var ps = new L4Ps(rq, insertSql);
 
@@ -291,8 +257,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps date and time with calendar", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var insertSql = "INSERT INTO ps_test_data (date_val, time_val, ts_val) VALUES (?, ?, ?)";
         var ps = new L4Ps(rq, insertSql);
 
@@ -324,8 +289,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps batch with error", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var insertSql = "INSERT INTO ps_test_data (num_val) VALUES (?)";
         var ps = new L4Ps(rq, insertSql);
 
@@ -364,8 +328,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps closeOnCompletion and inherited methods", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var selectSql = "SELECT * FROM ps_test_data WHERE id = ?";
         var ps = new L4Ps(rq, selectSql);
 
@@ -392,8 +355,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps unsupported operations and error handling", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var selectSql = "SELECT * FROM ps_test_data WHERE id = ?";
         var ps = new L4Ps(rq, selectSql);
 
@@ -476,8 +438,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps edge cases and invalid inputs", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
 
         // Test null/empty SQL
         try {
@@ -528,8 +489,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps stream, LOB, and null parameter setting methods", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var insertSql = "INSERT INTO ps_test_data (" +
           "text_val, clob_val, nclob_val, nstring_val, blob_val" +
           ") VALUES (?, ?, ?, ?, ?)";
@@ -670,8 +630,7 @@ public class L4PsTest {
       });
 
       it("Tests L4Ps setObject with target SQL type and scale/length", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
-        setupTestTable(rq);
+        setupPreparedStatementTestTable(rq);
         var insertSql = "INSERT INTO ps_test_data (" +
           "num_val, int_val, text_val, bool_val, blob_val, date_val, ts_val" +
           ") VALUES (?, ?, ?, ?, ?, ?, ?)";

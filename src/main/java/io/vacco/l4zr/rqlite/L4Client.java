@@ -32,89 +32,38 @@ public class L4Client {
     this.httpClient = (client != null) ? client : L4Http.defaultHttpClient();
   }
 
-  public void setBasicAuth(String username, String password) {
-    this.basicAuthUser = username;
-    this.basicAuthPass = password;
-  }
-
-  public L4Response executeSingle(String statement, Object... args) throws Exception {
-    return execute(new L4Statement().sql(statement).withPositionalParams(args));
-  }
-
-  public L4Response execute(L4Statement ... statements) throws Exception {
-    var body = L4Statement.toArray(statements).toString();
-    var queryParams = L4Options.queryParams();
-    var resp = doJSONPostRequest(executeURL + queryParams, body);
-    if (resp.statusCode() != 200) {
-      throw new IOException("Unexpected status code: " + resp.statusCode() + ", body: " + resp.body());
+  private HttpResponse<String> doPostRequest(String url, String body) {
+    try {
+      var builder = HttpRequest.newBuilder().uri(URI.create(url));
+      if (L4Options.timeoutSec > 0) {
+        builder.timeout(Duration.ofSeconds(L4Options.timeoutSec));
+      }
+      builder.method("POST", HttpRequest.BodyPublishers.ofString(body));
+      builder.header("Content-Type", "application/json");
+      addBasicAuth(builder);
+      var req = builder.build();
+      return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+    } catch (Exception e) {
+      throw new IllegalStateException(format("HTTP POST error: [%s]", url), e);
     }
-    var rb = resp.body();
-    var node = Json.parse(rb).asObject();
-    return new L4Response(resp.statusCode(), node);
   }
 
-  public L4Response querySingle(String statement, Object... args) throws Exception {
-    return query(new L4Statement().sql(statement).withPositionalParams(args));
+  private HttpResponse<String> doJSONPostRequest(String url, String body) {
+    return doPostRequest(url, body);
   }
 
-  public L4Response query(L4Statement ... statements) throws Exception {
-    var body = L4Statement.toArray(statements).toString();
-    var queryParams = L4Options.queryParams();
-    var resp = doJSONPostRequest(queryURL + queryParams, body);
-    var rb = resp.body();
-    var node = Json.parse(rb).asObject();
-    return new L4Response(resp.statusCode(), node);
-  }
-
-  public JsonValue status() throws Exception {
-    var resp = doGetRequest(statusURL);
-    if (resp.statusCode() != 200) {
-      throw new IOException("Unexpected status code: " + resp.statusCode());
+  private HttpResponse<String> doGetRequest(String url) {
+    try {
+      var builder = HttpRequest.newBuilder().uri(URI.create(url)).GET();
+      addBasicAuth(builder);
+      if (L4Options.timeoutSec > 0) {
+        builder.timeout(Duration.ofSeconds(L4Options.timeoutSec));
+      }
+      var req = builder.build();
+      return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+    } catch (Exception e) {
+      throw new IllegalStateException(format("HTTP GET error: [%s]", url), e);
     }
-    return Json.parse(resp.body());
-  }
-
-  public JsonValue nodes() throws Exception {
-    var resp = doGetRequest(nodesURL);
-    if (resp.statusCode() != 200) {
-      throw new IOException("Unexpected status code: " + resp.statusCode());
-    }
-    return Json.parse(resp.body());
-  }
-
-  public String ready() throws Exception {
-    var resp = doGetRequest(readyURL);
-    return resp.body();
-  }
-
-  private HttpResponse<String> doJSONPostRequest(String url, String body) throws Exception {
-    return doPostRequest(url, "application/json", body);
-  }
-
-  private HttpResponse<String> doPostRequest(String url, String contentType, String body) throws Exception {
-    var builder = HttpRequest.newBuilder().uri(URI.create(url));
-    if (L4Options.timeoutSec > 0) {
-      builder.timeout(Duration.ofSeconds(L4Options.timeoutSec));
-    }
-    builder.method("POST", HttpRequest.BodyPublishers.ofString(body));
-    if (contentType != null && !contentType.isEmpty()) {
-      builder.header("Content-Type", contentType);
-    }
-    addBasicAuth(builder);
-    var req = builder.build();
-    return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-  }
-
-  private HttpResponse<String> doGetRequest(String url) throws Exception {
-    var builder = HttpRequest.newBuilder()
-      .uri(URI.create(url))
-      .GET();
-    addBasicAuth(builder);
-    if (L4Options.timeoutSec > 0) {
-      builder.timeout(Duration.ofSeconds(L4Options.timeoutSec));
-    }
-    var req = builder.build();
-    return httpClient.send(req, HttpResponse.BodyHandlers.ofString());
   }
 
   private void addBasicAuth(HttpRequest.Builder builder) {
@@ -123,6 +72,61 @@ public class L4Client {
       String encoded = Base64.getEncoder().encodeToString(auth.getBytes());
       builder.header("Authorization", "Basic " + encoded);
     }
+  }
+
+  public void setBasicAuth(String username, String password) {
+    this.basicAuthUser = username;
+    this.basicAuthPass = password;
+  }
+
+  public L4Response executeSingle(String statement, Object... args) {
+    return execute(new L4Statement().sql(statement).withPositionalParams(args));
+  }
+
+  public L4Response execute(L4Statement ... statements) {
+    var body = L4Statement.toArray(statements).toString();
+    var queryParams = L4Options.queryParams();
+    var resp = doJSONPostRequest(executeURL + queryParams, body);
+    if (resp.statusCode() != 200) {
+      throw new IllegalStateException("Unexpected status code: " + resp.statusCode() + ", body: " + resp.body());
+    }
+    var rb = resp.body();
+    var node = Json.parse(rb).asObject();
+    return new L4Response(resp.statusCode(), node);
+  }
+
+  public L4Response querySingle(String statement, Object... args) {
+    return query(new L4Statement().sql(statement).withPositionalParams(args));
+  }
+
+  public L4Response query(L4Statement ... statements) {
+    var body = L4Statement.toArray(statements).toString();
+    var queryParams = L4Options.queryParams();
+    var resp = doJSONPostRequest(queryURL + queryParams, body);
+    var rb = resp.body();
+    var node = Json.parse(rb).asObject();
+    return new L4Response(resp.statusCode(), node);
+  }
+
+  public JsonValue status() {
+    var resp = doGetRequest(statusURL);
+    if (resp.statusCode() != 200) {
+      throw new IllegalStateException("Unexpected status code: " + resp.statusCode());
+    }
+    return Json.parse(resp.body());
+  }
+
+  public JsonValue nodes() {
+    var resp = doGetRequest(nodesURL);
+    if (resp.statusCode() != 200) {
+      throw new IllegalStateException("Unexpected status code: " + resp.statusCode());
+    }
+    return Json.parse(resp.body());
+  }
+
+  public String ready() {
+    var resp = doGetRequest(readyURL);
+    return resp.body();
   }
 
   public L4Client withTxTimeoutSec(long txTimeoutSec) {

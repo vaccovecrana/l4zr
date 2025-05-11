@@ -25,6 +25,8 @@ import static org.junit.Assert.*;
 @RunWith(J8SpecRunner.class)
 public class L4RsTest {
 
+  private static final L4Client rq = L4Tests.localClient();
+
   // Helper methods to read streams and readers
   private static byte[] readStream(InputStream is) throws Exception {
     if (is == null) return null;
@@ -53,7 +55,6 @@ public class L4RsTest {
   static {
     if (!GraphicsEnvironment.isHeadless()) {
       it("Validates L4Rs against a live rqlite instance", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq, "SELECT 1");
 
         var dr = rq.executeSingle("DROP TABLE rs_test_data");
@@ -358,7 +359,6 @@ public class L4RsTest {
 
       // New test block: Test ResultSet navigation and state
       it("Tests L4Rs navigation and state methods", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq, "SELECT 1");
         var res3 = rq.querySingle("SELECT * FROM rs_test_data");
         assertEquals(200, res3.statusCode);
@@ -408,7 +408,6 @@ public class L4RsTest {
       });
 
       it("Tests L4Rs unsupported operations and error handling", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq, "SELECT 1");
         var res3 = rq.querySingle("SELECT * FROM rs_test_data");
         assertEquals(200, res3.statusCode);
@@ -557,7 +556,6 @@ public class L4RsTest {
       });
 
       it("Tests L4Rs with empty ResultSet", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq, "SELECT 1");
         var res = rq.querySingle("SELECT * FROM rs_test_data WHERE id = 999");
         assertEquals(200, res.statusCode);
@@ -587,7 +585,6 @@ public class L4RsTest {
       });
 
       it("Tests L4Rs with invalid column index and edge cases", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         var stmt = new L4Ps(rq, "SELECT 1");
         var res3 = rq.querySingle("SELECT * FROM rs_test_data");
         assertEquals(200, res3.statusCode);

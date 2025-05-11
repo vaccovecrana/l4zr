@@ -4,7 +4,6 @@ import io.vacco.l4zr.rqlite.L4Statement;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
 import org.junit.runner.RunWith;
-import io.vacco.l4zr.rqlite.*;
 import java.awt.GraphicsEnvironment;
 
 import static java.lang.String.join;
@@ -17,7 +16,7 @@ public class L4ClientTest {
   static {
     if (!GraphicsEnvironment.isHeadless()) {
       it("Interacts with an Rqlite instance", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
+        var rq = L4Tests.localClient();
 
         System.out.println(rq.status().toString());
         System.out.println(rq.nodes().toString());
@@ -32,10 +31,11 @@ public class L4ClientTest {
           ")"
         ));
         assertEquals(200, res0.statusCode);
-
+        res0.print(System.out);
 
         var res1 = rq.querySingle("SELECT * FROM users");
         assertEquals(200, res1.statusCode);
+        res1.print(System.out);
 
         if (res1.results != null) {
           var rl = res1.results;
@@ -52,7 +52,7 @@ public class L4ClientTest {
 
         var res3 = rq.querySingle("SELECT * FROM users WHERE age > ?", 30);
         assertEquals(200, res3.statusCode);
-        System.out.println(res3);
+        res3.print(System.out);
       });
     }
   }

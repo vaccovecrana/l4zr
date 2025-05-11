@@ -17,6 +17,8 @@ import static org.junit.Assert.*;
 @RunWith(J8SpecRunner.class)
 public class L4StTest {
 
+  private static final L4Client rq = L4Tests.localClient();
+
   // Setup helper to create and populate test table
   private static void setupTestTable(L4Client rq) throws Exception {
     // Drop existing table
@@ -52,7 +54,6 @@ public class L4StTest {
   static {
     if (!GraphicsEnvironment.isHeadless()) {
       it("Tests L4St query execution and result navigation", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         setupTestTable(rq);
         var stmt = new L4St(rq);
 
@@ -102,7 +103,6 @@ public class L4StTest {
       });
 
       it("Tests L4St update operations", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         setupTestTable(rq);
         var stmt = new L4St(rq);
 
@@ -130,7 +130,6 @@ public class L4StTest {
       });
 
       it("Tests L4St execute method", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         setupTestTable(rq);
         var stmt = new L4St(rq);
 
@@ -176,7 +175,6 @@ public class L4StTest {
       });
 
       it("Tests L4St batch execution", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         setupTestTable(rq);
         var stmt = new L4St(rq);
 
@@ -213,7 +211,6 @@ public class L4StTest {
       });
 
       it("Tests L4St closeOnCompletion", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         setupTestTable(rq);
         var stmt = new L4St(rq);
 
@@ -252,7 +249,6 @@ public class L4StTest {
       });
 
       it("Tests L4St timeout handling", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         setupTestTable(rq);
         var stmt = new L4St(rq);
 
@@ -283,7 +279,6 @@ public class L4StTest {
       });
 
       it("Tests L4St max rows and fetch size", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         setupTestTable(rq);
         var stmt = new L4St(rq);
 
@@ -331,7 +326,6 @@ public class L4StTest {
       });
 
       it("Tests L4St unsupported operations and error handling", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         setupTestTable(rq);
         var stmt = new L4St(rq);
 
@@ -441,7 +435,6 @@ public class L4StTest {
       });
 
       it("Tests L4St edge cases and invalid inputs", () -> {
-        var rq = new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
         setupTestTable(rq);
         var stmt = new L4St(rq);
 

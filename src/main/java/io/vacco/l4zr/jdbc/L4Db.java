@@ -31,6 +31,7 @@ public class L4Db {
     return Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(value).matches();
   }
 
+  /* SQLite does not support schemas or catalogs, treat catalog as database name */
   public L4Result getTables(String catalog, String tableNamePattern,
                             String schemaPattern, String[] types) {
     var typeSet = types == null ? new HashSet<>(Arrays.asList(TABLE, VIEW)) : new HashSet<>(Arrays.asList(types));
@@ -57,7 +58,6 @@ public class L4Db {
         .filter(row -> matchesPattern(catalog, res.get(TABLE_CAT, row)))
         .collect(toList());
     }
-    // SQLite does not support schemas or catalogs, treat catalog as database name
     if (schemaPattern != null && !schemaPattern.isEmpty()) {
       res.values.clear();
     }

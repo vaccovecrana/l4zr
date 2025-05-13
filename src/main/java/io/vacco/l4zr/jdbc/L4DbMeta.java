@@ -5,8 +5,9 @@ import java.sql.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import static io.vacco.l4zr.jdbc.L4Block.*;
 import static io.vacco.l4zr.jdbc.L4Err.*;
-import static io.vacco.l4zr.jdbc.L4Jdbc.*;
+import static io.vacco.l4zr.jdbc.L4Db.*;
 
 public class L4DbMeta implements DatabaseMetaData {
 
@@ -553,8 +554,9 @@ public class L4DbMeta implements DatabaseMetaData {
 
   @Override public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException {
     // SQLite does not support schemas or catalogs, treat catalog as database name
-
-    return rs;
+    return sqlGet(() -> new L4Rs(
+      dbGetTables(catalog, schemaPattern, tableNamePattern, types, client), null)
+    );
   }
 
   @Override public ResultSet getSchemas() throws SQLException {
@@ -564,137 +566,19 @@ public class L4DbMeta implements DatabaseMetaData {
 
   @Override public ResultSet getCatalogs() throws SQLException {
     // SQLite supports multiple databases, list attached databases
-    var rs = executeQuery("PRAGMA database_list");
-    var catalogs = new ArrayList<List<String>>();
-    while (rs.next()) {
-      var name = rs.getString("name");
-      if (!name.equals("temp")) { // Exclude temporary database
-        catalogs.add(listOf(name));
-      }
-    }
-    rs.close();
-    return new L4Rs(
-      new L4Result(
-        listOf("TABLE_CAT"),
-        listOf("VARCHAR"), catalogs
-      ), null
-    );
+    return sqlGet(() -> new L4Rs(dbGetCatalogs(client), null));
   }
 
-  @Override public ResultSet getTableTypes() {
+  @Override public ResultSet getTableTypes() throws SQLException {
     // SQLite supports TABLE and VIEW
-    return new L4Rs(
-      new L4Result(
-        listOf("TABLE_TYPE"),
-        listOf("VARCHAR"),
-        listOf(listOf("TABLE"), listOf("VIEW"))
-      ), null
-    );
+    return sqlGet(() -> new L4Rs(dbGetTableTypes(client), null));
   }
 
   @Override public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
-    // SQLite does not support schemas
-    if (schemaPattern != null && !schemaPattern.isEmpty()) {
-      return executeQuery("SELECT * FROM (SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, NULL AS TABLE_NAME, " +
-        "NULL AS COLUMN_NAME, 0 AS DATA_TYPE, NULL AS TYPE_NAME, 0 AS COLUMN_SIZE, " +
-        "0 AS BUFFER_LENGTH, 0 AS DECIMAL_DIGITS, 0 AS NUM_PREC_RADIX, 0 AS NULLABLE, " +
-        "NULL AS REMARKS, NULL AS COLUMN_DEF, 0 AS SQL_DATA_TYPE, 0 AS SQL_DATETIME_SUB, " +
-        "0 AS CHAR_OCTET_LENGTH, 0 AS ORDINAL_POSITION, NULL AS IS_NULLABLE, NULL AS SCOPE_CATALOG, " +
-        "NULL AS SCOPE_SCHEMA, NULL AS SCOPE_TABLE, 0 AS SOURCE_DATA_TYPE, NULL AS IS_AUTOINCREMENT, " +
-        "NULL AS IS_GENERATEDCOLUMN) WHERE 1=0");
-    }
-
-    // Get all tables matching tableNamePattern
-    var tables = getTables(catalog, null, tableNamePattern, new String[]{"TABLE", "VIEW"});
-    var columns = new ArrayList<List<String>>();
-    while (tables.next()) {
-      var tableName = tables.getString("TABLE_NAME");
-      var tableCatalog = tables.getString("TABLE_CAT");
-      var rs = executeQuery(String.format("PRAGMA table_info('%s')", tableName.replace("'", "''")));
-      int ordinal = 1;
-      while (rs.next()) {
-        var colName = rs.getString("name");
-        if (!matchesPattern(colName, columnNamePattern)) {
-          continue;
-        }
-        var type = rs.getString("type").toUpperCase();
-        var notNull = rs.getInt("notnull") == 1;
-        var defaultValue = rs.getString("dflt_value");
-        var isAutoIncrement = rs.getString("pk") != null
-          && rs.getString("pk").equals("1")
-          && type.contains("INTEGER") && defaultValue == null;
-
-        // Map SQLite type to JDBC type
-        int sqlType;
-        String typeName = type;
-        int columnSize = 0;
-        int decimalDigits = 0;
-        if (type.contains("INT")) {
-          sqlType = Types.INTEGER;
-          columnSize = 10;
-        } else if (type.contains("REAL") || type.contains("FLOA") || type.contains("DOUB")) {
-          sqlType = Types.DOUBLE;
-          columnSize = 15;
-        } else if (type.contains("TEXT") || type.contains("CHAR") || type.contains("CLOB")) {
-          sqlType = Types.VARCHAR;
-          columnSize = 0; // No fixed limit
-        } else if (type.contains("BLOB")) {
-          sqlType = Types.BLOB;
-          columnSize = 0; // No fixed limit
-        } else if (type.contains("NUMERIC") || type.contains("DECIMAL")) {
-          sqlType = Types.NUMERIC;
-          columnSize = 15;
-          decimalDigits = 5;
-        } else if (type.contains("BOOL")) {
-          sqlType = Types.BOOLEAN;
-          columnSize = 1;
-        } else if (type.contains("DATE") || type.contains("DATETIME")) {
-          sqlType = Types.DATE;
-          columnSize = 10;
-        } else if (type.contains("TIMESTAMP")) {
-          sqlType = Types.TIMESTAMP;
-          columnSize = 19;
-        } else {
-          sqlType = Types.OTHER;
-        }
-
-        columns.add(listOf(
-          tableCatalog, // TABLE_CAT
-          null, // TABLE_SCHEM
-          tableName, // TABLE_NAME
-          colName, // COLUMN_NAME
-          sqlType, // DATA_TYPE
-          typeName, // TYPE_NAME
-          Integer.toString(columnSize), // COLUMN_SIZE
-          Integer.toString(0), // BUFFER_LENGTH (not used)
-          Integer.toString(decimalDigits), // DECIMAL_DIGITS
-          Integer.toString(10), // NUM_PREC_RADIX
-          notNull ? DatabaseMetaData.columnNoNulls : DatabaseMetaData.columnNullable, // NULLABLE
-          null, // REMARKS
-          defaultValue, // COLUMN_DEF
-          sqlType, // SQL_DATA_TYPE
-          0, // SQL_DATETIME_SUB
-          columnSize, // CHAR_OCTET_LENGTH
-          ordinal++, // ORDINAL_POSITION
-          notNull ? "NO" : "YES", // IS_NULLABLE
-          null, // SCOPE_CATALOG
-          null, // SCOPE_SCHEMA
-          null, // SCOPE_TABLE
-          0, // SOURCE_DATA_TYPE
-          isAutoIncrement ? "YES" : "NO", // IS_AUTOINCREMENT
-          "NO" // IS_GENERATEDCOLUMN
-        ));
-      }
-      rs.close();
-    }
-    tables.close();
-    return new L4Rs(columns, new String[]{
-      "TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME",
-      "COLUMN_SIZE", "BUFFER_LENGTH", "DECIMAL_DIGITS", "NUM_PREC_RADIX", "NULLABLE",
-      "REMARKS", "COLUMN_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "CHAR_OCTET_LENGTH",
-      "ORDINAL_POSITION", "IS_NULLABLE", "SCOPE_CATALOG", "SCOPE_SCHEMA", "SCOPE_TABLE",
-      "SOURCE_DATA_TYPE", "IS_AUTOINCREMENT", "IS_GENERATEDCOLUMN"
-    }, null);
+    return sqlGet(() -> new L4Rs(
+      dbGetColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern, client),
+      null
+    ));
   }
 
   @Override public ResultSet getColumnPrivileges(String catalog, String schema, String table, String columnNamePattern) throws SQLException {

@@ -49,18 +49,6 @@ public class L4Jdbc {
   public static final String RQ_BLOB      = "BLOB";
   public static final String RQ_NULL      = "NULL";
 
-  public static <T> List<T> repeat(T value, int count) {
-    var out = new ArrayList<T>(count);
-    for (int i = 0; i < count; i++) {
-      out.set(i, value);
-    }
-    return out;
-  }
-
-  @SafeVarargs public static <T> List<T> listOf(T ... elements) {
-    return Arrays.asList(elements);
-  }
-
   public static boolean anyOf(int sourceType, int ... types) {
     for (var t : types) {
       if (sourceType == t) {

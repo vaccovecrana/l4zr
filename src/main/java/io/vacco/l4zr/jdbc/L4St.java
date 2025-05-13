@@ -18,8 +18,8 @@ public class L4St implements Statement {
   protected int             maxRows = -1;
   protected int             fetchSize = 0;
 
-  protected boolean closeOnCompletion = false;
-  protected int   currentResultIndex = -1;
+  protected boolean         closeOnCompletion = false;
+  protected int             currentResultIndex = -1;
 
   public L4St(L4Client client) {
     this.client = Objects.requireNonNull(client);
@@ -38,7 +38,7 @@ public class L4St implements Statement {
     currentResultSet = null;
   }
 
-  private L4Response runRaw(String sql) throws Exception {
+  private L4Response runRaw(String sql) {
     var sel = isSelect(sql);
     var sta = split(sql);
     return sel ? client.query(sta) : client.execute(sta);

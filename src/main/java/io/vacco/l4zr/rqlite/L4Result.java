@@ -3,6 +3,7 @@ package io.vacco.l4zr.rqlite;
 import io.vacco.l4zr.json.JsonObject;
 import java.io.PrintStream;
 import java.util.*;
+import java.util.function.BiConsumer;
 
 import static io.vacco.l4zr.rqlite.L4Json.*;
 
@@ -37,9 +38,18 @@ public class L4Result {
     return -1;
   }
 
-  public void addRow(String ... values) {
+  public void forEach(BiConsumer<Integer, List<String>> rowFn) {
+    if (values != null) {
+      for (int i = 0; i < values.size(); i++) {
+        rowFn.accept(i, values.get(i));
+      }
+    }
+  }
+
+  public L4Result addRow(String ... values) {
     var row = Arrays.asList(values);
     this.values.add(row);
+    return this;
   }
 
   public String get(String col, List<String> row) {

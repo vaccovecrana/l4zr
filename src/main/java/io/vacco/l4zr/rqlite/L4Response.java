@@ -29,4 +29,11 @@ public class L4Response {
     }
   }
 
+  public L4Result first() {
+    if (results != null && !results.isEmpty()) {
+      return results.get(0);
+    }
+    return null;
+  }
+
 }

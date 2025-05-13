@@ -632,35 +632,8 @@ public class L4DbMeta implements DatabaseMetaData {
       "0 AS PSEUDO_COLUMN) WHERE 1=0");
   }
 
-  @Override
-  public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
-    // SQLite does not support schemas
-    if (schema != null && !schema.isEmpty()) {
-      return executeQuery("SELECT * FROM (SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, NULL AS TABLE_NAME, " +
-        "NULL AS COLUMN_NAME, 0 AS KEY_SEQ, NULL AS PK_NAME) WHERE 1=0");
-    }
-    if (table == null || table.isEmpty()) {
-      throw badQuery("Table name is required");
-    }
-    ResultSet rs = executeQuery(String.format("PRAGMA table_info('%s')", table.replace("'", "''")));
-    var primaryKeys = new ArrayList<Object[]>();
-    int keySeq = 1;
-    while (rs.next()) {
-      if (rs.getInt("pk") > 0) {
-        primaryKeys.add(new Object[]{
-          catalog, // TABLE_CAT
-          null, // TABLE_SCHEM
-          table, // TABLE_NAME
-          rs.getString("name"), // COLUMN_NAME
-          keySeq++, // KEY_SEQ
-          "PRIMARY" // PK_NAME
-        });
-      }
-    }
-    rs.close();
-    return new L4Rs(primaryKeys, new String[]{
-      "TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "KEY_SEQ", "PK_NAME"
-    }, null);
+  @Override public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
+    return sqlGet(() -> new L4Rs(dbGetPrimaryKeys(catalog, schema, table, client), null));
   }
 
   @Override

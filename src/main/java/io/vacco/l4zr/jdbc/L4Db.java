@@ -70,8 +70,8 @@ public class L4Db {
   public static L4Result dbGetCatalogs(L4Client client) {
     var rs = client.querySingle("PRAGMA database_list");
     var out = client.querySingle("SELECT * from (SELECT '' AS TABLE_CAT) WHERE 1 = 0");
-    var res0 = rs.results.get(0);
-    var out0 = out.results.get(0);
+    var res0 = rs.first();
+    var out0 = out.first();
     res0.forEach((i, row) -> {
       var name = res0.get("name", row);
       if (!name.equals("temp")) { // Exclude temporary database
@@ -98,32 +98,14 @@ public class L4Db {
       "  '' AS SCOPE_SCHEMA, '' AS SCOPE_TABLE, 0 AS SOURCE_DATA_TYPE, '' AS IS_AUTOINCREMENT, ",
       "  '' AS IS_GENERATEDCOLUMN",
       ") WHERE 1 = 0"
-    )).results.get(0);
-
-    out.types.set(0, RQ_VARCHAR);
-    out.types.set(1, RQ_VARCHAR);
-    out.types.set(2, RQ_VARCHAR);
-    out.types.set(3, RQ_VARCHAR);
-    out.types.set(4, RQ_INTEGER);
-    out.types.set(5, RQ_VARCHAR);
-    out.types.set(6, RQ_INTEGER);
-    out.types.set(7, RQ_INTEGER);
-    out.types.set(8, RQ_INTEGER);
-    out.types.set(9, RQ_INTEGER);
-    out.types.set(10, RQ_INTEGER);
-    out.types.set(11, RQ_VARCHAR);
-    out.types.set(12, RQ_VARCHAR);
-    out.types.set(13, RQ_INTEGER);
-    out.types.set(14, RQ_INTEGER);
-    out.types.set(15, RQ_INTEGER);
-    out.types.set(16, RQ_INTEGER);
-    out.types.set(17, RQ_VARCHAR);
-    out.types.set(18, RQ_VARCHAR);
-    out.types.set(19, RQ_VARCHAR);
-    out.types.set(20, RQ_VARCHAR);
-    out.types.set(21, RQ_INTEGER);
-    out.types.set(22, RQ_VARCHAR);
-    out.types.set(23, RQ_VARCHAR);
+    )).first().setTypes(
+      RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
+      RQ_INTEGER, RQ_VARCHAR, RQ_INTEGER, RQ_INTEGER,
+      RQ_INTEGER, RQ_INTEGER, RQ_INTEGER, RQ_VARCHAR,
+      RQ_VARCHAR, RQ_INTEGER, RQ_INTEGER, RQ_INTEGER,
+      RQ_INTEGER, RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
+      RQ_VARCHAR, RQ_INTEGER, RQ_VARCHAR, RQ_VARCHAR
+    );
 
     if (schemaPattern != null && !schemaPattern.isEmpty()) { // SQLite does not support schemas
       return out;
@@ -181,6 +163,36 @@ public class L4Db {
       });
     });
 
+    return out;
+  }
+
+  public static L4Result dbGetPrimaryKeys(String catalog, String schema, String table, L4Client client) {
+    var out = client.querySingle(join("\n", "",
+      "SELECT * FROM (",
+      "  SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, ",
+      "         NULL AS TABLE_NAME, NULL AS COLUMN_NAME, 0 AS KEY_SEQ, NULL AS PK_NAME",
+      ") WHERE 1 = 0"
+    )).first().setTypes(
+      RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
+      RQ_VARCHAR, RQ_INTEGER, RQ_VARCHAR
+    );
+    if (schema != null && !schema.isEmpty()) { // SQLite does not support schemas
+      return out;
+    }
+    var res = client.querySingle(
+      format("PRAGMA table_info('%s')", table.replace("'", "''"))
+    ).first();
+    final int[] keySeq = new int[] { 1 };
+    res.forEach((i, row) -> {
+      var pk = res.get(kPk, row);
+      if (pk != null && !pk.equals("0")) {
+        out.addRow(
+          catalog, null, table, res.get(kName, row),
+          Integer.toString(keySeq[0]++), // TODO double check this.
+          format("PK_%s", table.toUpperCase())
+        );
+      }
+    });
     return out;
   }
 

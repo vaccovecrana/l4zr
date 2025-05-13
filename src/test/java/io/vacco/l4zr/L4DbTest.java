@@ -24,6 +24,7 @@ public class L4DbTest {
         dbGetTables(null, null, "momo", null, rq).print(o);
         dbGetTableTypes(rq).print(o);
         dbGetColumns(null, null, null , null, rq).print(o);
+        dbGetPrimaryKeys(null, null, "users", rq).print(o); // TODO this test needs pre-initialized tables
       });
     }
   }

@@ -52,6 +52,11 @@ public class L4Result {
     return this;
   }
 
+  public L4Result setTypes(String ... types) {
+    this.types = Arrays.asList(types);
+    return this;
+  }
+
   public String get(String col, List<String> row) {
     return row.get(indexOf(col));
   }

@@ -49,6 +49,14 @@ public class L4Jdbc {
   public static final String RQ_BLOB      = "BLOB";
   public static final String RQ_NULL      = "NULL";
 
+  public static final String[] RQ_TYPES = new String[] {
+    RQ_INTEGER, RQ_NUMERIC, RQ_BOOLEAN, RQ_TINYINT,
+    RQ_SMALLINT, RQ_BIGINT, RQ_FLOAT, RQ_DOUBLE,
+    RQ_VARCHAR, RQ_DATE, RQ_TIME, RQ_TIMESTAMP,
+    RQ_DATALINK, RQ_CLOB, RQ_NCLOB, RQ_NVARCHAR,
+    RQ_BLOB, RQ_NULL
+  };
+
   public static boolean anyOf(int sourceType, int ... types) {
     for (var t : types) {
       if (sourceType == t) {

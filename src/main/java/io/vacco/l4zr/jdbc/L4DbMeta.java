@@ -554,7 +554,7 @@ public class L4DbMeta implements DatabaseMetaData {
 
   @Override public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException {
     // SQLite does not support schemas or catalogs, treat catalog as database name
-    return sqlGet(() -> new L4Rs(
+    return sqlRun(() -> new L4Rs(
       dbGetTables(catalog, schemaPattern, tableNamePattern, types, client), null)
     );
   }
@@ -566,16 +566,16 @@ public class L4DbMeta implements DatabaseMetaData {
 
   @Override public ResultSet getCatalogs() throws SQLException {
     // SQLite supports multiple databases, list attached databases
-    return sqlGet(() -> new L4Rs(dbGetCatalogs(client), null));
+    return sqlRun(() -> new L4Rs(dbGetCatalogs(client), null));
   }
 
   @Override public ResultSet getTableTypes() throws SQLException {
     // SQLite supports TABLE and VIEW
-    return sqlGet(() -> new L4Rs(dbGetTableTypes(client), null));
+    return sqlRun(() -> new L4Rs(dbGetTableTypes(client), null));
   }
 
   @Override public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
-    return sqlGet(() -> new L4Rs(
+    return sqlRun(() -> new L4Rs(
       dbGetColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern, client),
       null
     ));
@@ -593,36 +593,8 @@ public class L4DbMeta implements DatabaseMetaData {
       "NULL AS GRANTOR, NULL AS GRANTEE, NULL AS PRIVILEGE, NULL AS IS_GRANTABLE) WHERE 1=0");
   }
 
-  @Override
-  public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable) throws SQLException {
-    // Use primary key columns as best row identifier
-    ResultSet pkRs = getPrimaryKeys(catalog, schema, table);
-    var identifiers = new ArrayList<Object[]>();
-    while (pkRs.next()) {
-      String colName = pkRs.getString("COLUMN_NAME");
-      ResultSet colRs = getColumns(catalog, schema, table, colName);
-      if (colRs.next()) {
-        int nullableFlag = colRs.getInt("NULLABLE");
-        if (!nullable || nullableFlag == DatabaseMetaData.columnNoNulls) {
-          identifiers.add(new Object[]{
-            colRs.getString("TABLE_CAT"), // SCOPE
-            colRs.getString("COLUMN_NAME"), // COLUMN_NAME
-            colRs.getInt("DATA_TYPE"), // DATA_TYPE
-            colRs.getString("TYPE_NAME"), // TYPE_NAME
-            colRs.getInt("COLUMN_SIZE"), // COLUMN_SIZE
-            colRs.getInt("BUFFER_LENGTH"), // BUFFER_LENGTH
-            colRs.getInt("DECIMAL_DIGITS"), // DECIMAL_DIGITS
-            DatabaseMetaData.bestRowSession // PSEUDO_COLUMN
-          });
-        }
-      }
-      colRs.close();
-    }
-    pkRs.close();
-    return new L4Rs(identifiers, new String[]{
-      "SCOPE", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE",
-      "BUFFER_LENGTH", "DECIMAL_DIGITS", "PSEUDO_COLUMN"
-    }, null);
+  @Override public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable) throws SQLException {
+    return sqlRun(() -> new L4Rs(dbGetBestRowIdentifier(catalog, schema, table, nullable, client), null));
   }
 
   @Override public ResultSet getVersionColumns(String catalog, String schema, String table) throws SQLException {
@@ -633,222 +605,29 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
-    return sqlGet(() -> new L4Rs(dbGetPrimaryKeys(catalog, schema, table, client), null));
+    return sqlRun(() -> new L4Rs(dbGetPrimaryKeys(catalog, schema, table, client), null));
   }
 
-  @Override
-  public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
-    // SQLite does not support schemas
-    if (schema != null && !schema.isEmpty()) {
-      return executeQuery("SELECT * FROM (SELECT NULL AS PKTABLE_CAT, NULL AS PKTABLE_SCHEM, NULL AS PKTABLE_NAME, " +
-        "NULL AS PKCOLUMN_NAME, NULL AS FKTABLE_CAT, NULL AS FKTABLE_SCHEM, NULL AS FKTABLE_NAME, " +
-        "NULL AS FKCOLUMN_NAME, 0 AS KEY_SEQ, 0 AS UPDATE_RULE, 0 AS DELETE_RULE, " +
-        "NULL AS FK_NAME, NULL AS PK_NAME, 0 AS DEFERRABILITY) WHERE 1=0");
-    }
-    if (table == null || table.isEmpty()) {
-      throw badQuery("Table name is required");
-    }
-    ResultSet rs = executeQuery(String.format("PRAGMA foreign_key_list('%s')", table.replace("'", "''")));
-    var foreignKeys = new ArrayList<Object[]>();
-    while (rs.next()) {
-      foreignKeys.add(new Object[]{
-        catalog, // PKTABLE_CAT
-        null, // PKTABLE_SCHEM
-        rs.getString("table"), // PKTABLE_NAME
-        rs.getString("to"), // PKCOLUMN_NAME
-        catalog, // FKTABLE_CAT
-        null, // FKTABLE_SCHEM
-        table, // FKTABLE_NAME
-        rs.getString("from"), // FKCOLUMN_NAME
-        rs.getInt("seq") + 1, // KEY_SEQ
-        DatabaseMetaData.importedKeyNoAction, // UPDATE_RULE (SQLite does not support ON UPDATE)
-        rs.getString("on_delete") != null && rs.getString("on_delete").equals("CASCADE")
-          ? DatabaseMetaData.importedKeyCascade : DatabaseMetaData.importedKeyNoAction, // DELETE_RULE
-        "FK_" + table + "_" + rs.getString("from"), // FK_NAME (synthetic)
-        "PRIMARY", // PK_NAME
-        DatabaseMetaData.importedKeyNotDeferrable // DEFERRABILITY
-      });
-    }
-    rs.close();
-    return new L4Rs(foreignKeys, new String[]{
-      "PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME",
-      "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME",
-      "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY"
-    }, null);
+  @Override public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
+    return sqlRun(() -> new L4Rs(dbGetImportedKeys(catalog, table, client), null));
   }
 
-  @Override
-  public ResultSet getExportedKeys(String catalog, String schema, String table) throws SQLException {
-    // SQLite does not support schemas
-    if (schema != null && !schema.isEmpty()) {
-      return executeQuery("SELECT * FROM (SELECT NULL AS PKTABLE_CAT, NULL AS PKTABLE_SCHEM, NULL AS PKTABLE_NAME, " +
-        "NULL AS PKCOLUMN_NAME, NULL AS FKTABLE_CAT, NULL AS FKTABLE_SCHEM, NULL AS FKTABLE_NAME, " +
-        "NULL AS FKCOLUMN_NAME, 0 AS KEY_SEQ, 0 AS UPDATE_RULE, 0 AS DELETE_RULE, " +
-        "NULL AS FK_NAME, NULL AS PK_NAME, 0 AS DEFERRABILITY) WHERE 1=0");
-    }
-    if (table == null || table.isEmpty()) {
-      throw badQuery("Table name is required");
-    }
-    // Find all tables with foreign keys referencing this table
-    ResultSet tables = getTables(catalog, null, "%", new String[]{"TABLE"});
-    var exportedKeys = new ArrayList<Object[]>();
-    while (tables.next()) {
-      String fkTable = tables.getString("TABLE_NAME");
-      ResultSet fkRs = executeQuery(String.format("PRAGMA foreign_key_list('%s')", fkTable.replace("'", "''")));
-      while (fkRs.next()) {
-        if (table.equals(fkRs.getString("table"))) {
-          exportedKeys.add(new Object[]{
-            catalog, // PKTABLE_CAT
-            null, // PKTABLE_SCHEM
-            table, // PKTABLE_NAME
-            fkRs.getString("to"), // PKCOLUMN_NAME
-            catalog, // FKTABLE_CAT
-            null, // FKTABLE_SCHEM
-            fkTable, // FKTABLE_NAME
-            fkRs.getString("from"), // FKCOLUMN_NAME
-            fkRs.getInt("seq") + 1, // KEY_SEQ
-            DatabaseMetaData.importedKeyNoAction, // UPDATE_RULE
-            fkRs.getString("on_delete") != null && fkRs.getString("on_delete").equals("CASCADE")
-              ? DatabaseMetaData.importedKeyCascade : DatabaseMetaData.importedKeyNoAction, // DELETE_RULE
-            "FK_" + fkTable + "_" + fkRs.getString("from"), // FK_NAME (synthetic)
-            "PRIMARY", // PK_NAME
-            DatabaseMetaData.importedKeyNotDeferrable // DEFERRABILITY
-          });
-        }
-      }
-      fkRs.close();
-    }
-    tables.close();
-    return new L4Rs(exportedKeys, new String[]{
-      "PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME",
-      "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME",
-      "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY"
-    }, null);
+  @Override public ResultSet getExportedKeys(String catalog, String schema, String table) throws SQLException {
+    return sqlRun(() -> new L4Rs(dbGetExportedKeys(catalog, table, client), null));
   }
 
-  @Override
-  public ResultSet getCrossReference(String parentCatalog, String parentSchema, String parentTable,
-                                     String foreignCatalog, String foreignSchema, String foreignTable) throws SQLException {
-    // SQLite does not support schemas
-    if (parentSchema != null && !parentSchema.isEmpty() || foreignSchema != null && !foreignSchema.isEmpty()) {
-      return executeQuery("SELECT * FROM (SELECT NULL AS PKTABLE_CAT, NULL AS PKTABLE_SCHEM, NULL AS PKTABLE_NAME, " +
-        "NULL AS PKCOLUMN_NAME, NULL AS FKTABLE_CAT, NULL AS FKTABLE_SCHEM, NULL AS FKTABLE_NAME, " +
-        "NULL AS FKCOLUMN_NAME, 0 AS KEY_SEQ, 0 AS UPDATE_RULE, 0 AS DELETE_RULE, " +
-        "NULL AS FK_NAME, NULL AS PK_NAME, 0 AS DEFERRABILITY) WHERE 1=0");
-    }
-    ResultSet fkRs = getImportedKeys(foreignCatalog, foreignSchema, foreignTable);
-    var crossRefs = new ArrayList<Object[]>();
-    while (fkRs.next()) {
-      if (parentTable.equals(fkRs.getString("PKTABLE_NAME")) &&
-        (parentCatalog == null || parentCatalog.equals(fkRs.getString("PKTABLE_CAT")))) {
-        crossRefs.add(new Object[]{
-          fkRs.getString("PKTABLE_CAT"),
-          fkRs.getString("PKTABLE_SCHEM"),
-          fkRs.getString("PKTABLE_NAME"),
-          fkRs.getString("PKCOLUMN_NAME"),
-          fkRs.getString("FKTABLE_CAT"),
-          fkRs.getString("FKTABLE_SCHEM"),
-          fkRs.getString("FKTABLE_NAME"),
-          fkRs.getString("FKCOLUMN_NAME"),
-          fkRs.getInt("KEY_SEQ"),
-          fkRs.getInt("UPDATE_RULE"),
-          fkRs.getInt("DELETE_RULE"),
-          fkRs.getString("FK_NAME"),
-          fkRs.getString("PK_NAME"),
-          fkRs.getInt("DEFERRABILITY")
-        });
-      }
-    }
-    fkRs.close();
-    return new L4Rs(crossRefs, new String[]{
-      "PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME",
-      "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME",
-      "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY"
-    }, null);
+  @Override public ResultSet getCrossReference(String parentCatalog, String parentSchema, String parentTable,
+                                               String foreignCatalog, String foreignSchema, String foreignTable) throws SQLException {
+    return sqlRun(() -> new L4Rs(dbGetCrossReference(parentCatalog, parentTable, foreignCatalog, foreignTable, client), null));
   }
 
-  @Override
-  public ResultSet getTypeInfo() throws SQLException {
-    // Common SQLite types
-    var types = new ArrayList<Object[]>();
-    types.add(new Object[]{"INTEGER", Types.INTEGER, 10, null, null, null,
-      DatabaseMetaData.typeNullable, false, 3, true, false, false,
-      "INTEGER", 0, 0, 10, "YES", null});
-    types.add(new Object[]{"TEXT", Types.VARCHAR, 0, "'", "'", null,
-      DatabaseMetaData.typeNullable, false, 3, true, false, false,
-      "TEXT", 0, 0, 0, "YES", null});
-    types.add(new Object[]{"REAL", Types.DOUBLE, 15, null, null, null,
-      DatabaseMetaData.typeNullable, false, 3, true, false, false,
-      "REAL", 0, 0, 15, "YES", null});
-    types.add(new Object[]{"BLOB", Types.BLOB, 0, null, null, null,
-      DatabaseMetaData.typeNullable, false, 3, true, false, false,
-      "BLOB", 0, 0, 0, "YES", null});
-    types.add(new Object[]{"NUMERIC", Types.NUMERIC, 15, null, null, null,
-      DatabaseMetaData.typeNullable, false, 3, true, false, false,
-      "NUMERIC", 0, 5, 10, "YES", null});
-    types.add(new Object[]{"BOOLEAN", Types.BOOLEAN, 1, null, null, null,
-      DatabaseMetaData.typeNullable, false, 3, true, false, false,
-      "BOOLEAN", 0, 0, 1, "YES", null});
-    types.add(new Object[]{"DATE", Types.DATE, 10, "'", "'", null,
-      DatabaseMetaData.typeNullable, false, 3, true, false, false,
-      "DATE", 0, 0, 10, "YES", null});
-    types.add(new Object[]{"TIMESTAMP", Types.TIMESTAMP, 19, "'", "'", null,
-      DatabaseMetaData.typeNullable, false, 3, true, false, false,
-      "TIMESTAMP", 0, 0, 19, "YES", null});
-    return new L4Rs(types, new String[]{
-      "TYPE_NAME", "DATA_TYPE", "PRECISION", "LITERAL_PREFIX", "LITERAL_SUFFIX",
-      "CREATE_PARAMS", "NULLABLE", "CASE_SENSITIVE", "SEARCHABLE", "UNSIGNED_ATTRIBUTE",
-      "FIXED_PREC_SCALE", "AUTO_INCREMENT", "LOCAL_TYPE_NAME", "MINIMUM_SCALE",
-      "MAXIMUM_SCALE", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "NUM_PREC_RADIX"
-    }, null);
+  @Override public ResultSet getTypeInfo() throws SQLException {
+    return sqlRun(() -> new L4Rs(dbGetTypeInfo(client), null));
   }
 
-  @Override
-  public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate) throws SQLException {
-    // SQLite does not support schemas
-    if (schema != null && !schema.isEmpty()) {
-      return executeQuery("SELECT * FROM (SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, NULL AS TABLE_NAME, " +
-        "0 AS NON_UNIQUE, NULL AS INDEX_QUALIFIER, NULL AS INDEX_NAME, 0 AS TYPE, " +
-        "0 AS ORDINAL_POSITION, NULL AS COLUMN_NAME, NULL AS ASC_OR_DESC, 0 AS CARDINALITY, " +
-        "0 AS PAGES, NULL AS FILTER_CONDITION) WHERE 1=0");
-    }
-    if (table == null || table.isEmpty()) {
-      throw badQuery("Table name is required");
-    }
-    ResultSet rs = executeQuery(String.format("PRAGMA index_list('%s')", table.replace("'", "''")));
-    var indexes = new ArrayList<Object[]>();
-    while (rs.next()) {
-      String indexName = rs.getString("name");
-      boolean isUnique = rs.getInt("unique") == 1;
-      if (unique && !isUnique) {
-        continue; // Skip non-unique indexes if unique=true
-      }
-      ResultSet idxInfo = executeQuery(String.format("PRAGMA index_info('%s')", indexName.replace("'", "''")));
-      while (idxInfo.next()) {
-        indexes.add(new Object[]{
-          catalog, // TABLE_CAT
-          null, // TABLE_SCHEM
-          table, // TABLE_NAME
-          isUnique ? 0 : 1, // NON_UNIQUE
-          null, // INDEX_QUALIFIER
-          indexName, // INDEX_NAME
-          DatabaseMetaData.tableIndexOther, // TYPE
-          idxInfo.getInt("seqno") + 1, // ORDINAL_POSITION
-          idxInfo.getString("name"), // COLUMN_NAME
-          null, // ASC_OR_DESC (SQLite does not provide)
-          0, // CARDINALITY (not available)
-          0, // PAGES (not available)
-          null // FILTER_CONDITION
-        });
-      }
-      idxInfo.close();
-    }
-    rs.close();
-    return new L4Rs(indexes, new String[]{
-      "TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "NON_UNIQUE", "INDEX_QUALIFIER",
-      "INDEX_NAME", "TYPE", "ORDINAL_POSITION", "COLUMN_NAME", "ASC_OR_DESC",
-      "CARDINALITY", "PAGES", "FILTER_CONDITION"
-    }, null);
+  @Override public ResultSet getIndexInfo(String catalog, String schema, String table,
+                                          boolean unique, boolean approximate) throws SQLException {
+    return sqlRun(() -> new L4Rs(dbGetIndexInfo(catalog, table, unique, client), null));
   }
 
   // ResultSet Support

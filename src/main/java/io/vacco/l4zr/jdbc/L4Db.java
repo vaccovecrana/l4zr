@@ -2,12 +2,10 @@ package io.vacco.l4zr.jdbc;
 
 import io.vacco.l4zr.rqlite.*;
 import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
 import java.sql.Types;
 import java.util.*;
 import java.util.regex.Pattern;
 
-import static io.vacco.l4zr.jdbc.L4Err.badQuery;
 import static io.vacco.l4zr.jdbc.L4Jdbc.*;
 import static java.lang.String.*;
 import static java.util.stream.Collectors.toList;
@@ -67,8 +65,9 @@ public class L4Db {
   }
 
   /* SQLite does not support schemas or catalogs, treat catalog as database name */
-  public static L4Result dbGetTables(String catalog, String tableNamePattern,
-                                     String schemaPattern, String[] types, L4Client client) {
+  public static L4Result dbGetTables(String catalog, String schemaPattern,
+                                     String tableNamePattern, String[] types,
+                                     L4Client client) {
     var typeSet = types == null ? new HashSet<>(Arrays.asList(TABLE, VIEW)) : new HashSet<>(Arrays.asList(types));
     var typeFilter = "";
     if (!typeSet.contains(TABLE) && typeSet.contains(VIEW)) {
@@ -87,7 +86,11 @@ public class L4Db {
     tableNamePattern = tableNamePattern == null ? "%" : tableNamePattern.replace("'", "''");
     sql = format(sql, typeFilter, tableNamePattern);
     var response = client.querySingle(sql);
-    var res = response.first();
+    var res = response.first().setTypes(
+      RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
+      RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
+      RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR
+    );
     if (catalog != null && !catalog.isEmpty()) {
       res.values = res.values.stream()
         .filter(row -> matchesPattern(catalog, res.get(TABLE_CAT, row)))
@@ -101,25 +104,27 @@ public class L4Db {
 
   public static L4Result dbGetCatalogs(L4Client client) {
     var rs = client.querySingle("PRAGMA database_list");
-    var out = client.querySingle("SELECT * from (SELECT NULL TABLE_CAT) WHERE 1 = 0");
+    var out = client.querySingle("SELECT * from (SELECT NULL TABLE_CAT) WHERE 1 = 0").first().setTypes(RQ_VARCHAR);
     var res0 = rs.first();
-    var out0 = out.first();
     res0.forEach((i, row) -> {
       var name = res0.get(kName, row);
       if (!name.equals(kTemp)) { // Exclude temporary database
-        out0.addRow(name);
+        out.addRow(name);
       }
     });
-    return out0;
+    return out;
   }
 
   public static L4Result dbGetTableTypes(L4Client client) {
-    var out = client.querySingle("Select * from (SELECT NULL TABLE_TYPE) WHERE 1 = 0").first();
+    var out = client
+      .querySingle("SELECT * FROM (SELECT NULL TABLE_TYPE) WHERE 1 = 0")
+      .first().setTypes(RQ_VARCHAR);
     return out.addRow(TABLE).addRow(VIEW);
   }
 
-  public static L4Result dbGetColumns(String catalog, String schemaPattern, String tableNamePattern,
-                                      String columnNamePattern, L4Client client) {
+  public static L4Result dbGetColumns(String catalog, String schemaPattern,
+                                      String tableNamePattern, String columnNamePattern,
+                                      L4Client client) {
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, NULL AS TABLE_NAME, ",
@@ -144,7 +149,7 @@ public class L4Db {
     }
 
     // Get all tables matching tableNamePattern
-    var tables = dbGetTables(catalog, tableNamePattern, null, new String[] {TABLE, VIEW}, client);
+    var tables = dbGetTables(catalog, schemaPattern, tableNamePattern, new String[] {TABLE, VIEW}, client);
 
     tables.forEach((i, row) -> {
       var tableName = out.get(TABLE_NAME, row);

@@ -496,6 +496,58 @@ public class L4Jdbc {
     }
   }
 
+  public static Class<?> getJdbcTypeClass(String type) {
+    var typeUpper = type.toUpperCase();
+    switch (typeUpper) {
+      case RQ_INTEGER:   return Integer.class;
+      case RQ_NUMERIC:   return java.math.BigDecimal.class;
+      case RQ_BOOLEAN:   return Boolean.class;
+      case RQ_TINYINT:   return Byte.class;
+      case RQ_SMALLINT:  return Short.class;
+      case RQ_BIGINT:    return Long.class;
+      case RQ_FLOAT:     return Float.class;
+      case RQ_DOUBLE:    return Double.class;
+      case RQ_VARCHAR:
+      case RQ_NVARCHAR:  return String.class;
+      case RQ_DATE:      return java.sql.Date.class;
+      case RQ_TIME:      return java.sql.Time.class;
+      case RQ_TIMESTAMP: return java.sql.Timestamp.class;
+      case RQ_DATALINK:  return java.net.URL.class;
+      case RQ_CLOB:      return java.sql.Clob.class;
+      case RQ_NCLOB:     return java.sql.NClob.class;
+      case RQ_BLOB:      return byte[].class;
+      default:           return Object.class;
+    }
+  }
+
+  public static String getJdbcTypeClassName(String type) {
+    return getJdbcTypeClass(type).getCanonicalName();
+  }
+
+  public static int getJdbcTypeColumnDisplaySize(String type) {
+    var typeUpper = type.toUpperCase();
+    switch (typeUpper) {
+      case RQ_INTEGER:    return 11;   // -2147483648 to 2147483647
+      case RQ_NUMERIC:    return 38;   // Arbitrary precision, conservative estimate
+      case RQ_BOOLEAN:    return 5;    // "true" or "false"
+      case RQ_TINYINT:    return 4;    // -128 to 127
+      case RQ_SMALLINT:   return 6;    // -32768 to 32767
+      case RQ_BIGINT:     return 20;   // -2^63 to 2^63-1
+      case RQ_FLOAT:      return 25;   // Scientific notation, e.g., -1.2345678E123
+      case RQ_DOUBLE:     return 25;   // Scientific notation, e.g., -1.234567890123456E123
+      case RQ_VARCHAR:    return 255;  // Arbitrary, conservative default
+      case RQ_DATE:       return 10;   // "YYYY-MM-DD"
+      case RQ_TIME:       return 8;    // "HH:MM:SS"
+      case RQ_TIMESTAMP:  return 19;   // "YYYY-MM-DD HH:MM:SS"
+      case RQ_DATALINK:   return 255;  // URL, conservative default
+      case RQ_CLOB:       return 255;  // Large text, conservative default
+      case RQ_NCLOB:      return 255;  // Large national text
+      case RQ_NVARCHAR:   return 255;  // National text, conservative default
+      case RQ_BLOB:       return 255;  // Binary data, conservative default
+      default:            return 4;    // Fallback for unknown types
+    }
+  }
+
   public static boolean isSelect(String rawSql) {
     if (rawSql == null || rawSql.trim().isEmpty()) {
       return false;

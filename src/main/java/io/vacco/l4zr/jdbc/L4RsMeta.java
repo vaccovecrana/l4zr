@@ -86,27 +86,7 @@ public class L4RsMeta implements ResultSetMetaData {
     if (type == null || RQ_NULL.equalsIgnoreCase(type)) {
       return 4; // "NULL"
     }
-    var typeUpper = type.toUpperCase();
-    switch (typeUpper) {
-      case RQ_INTEGER:    return 11;   // -2147483648 to 2147483647
-      case RQ_NUMERIC:    return 38;   // Arbitrary precision, conservative estimate
-      case RQ_BOOLEAN:    return 5;    // "true" or "false"
-      case RQ_TINYINT:    return 4;    // -128 to 127
-      case RQ_SMALLINT:   return 6;    // -32768 to 32767
-      case RQ_BIGINT:     return 20;   // -2^63 to 2^63-1
-      case RQ_FLOAT:      return 25;   // Scientific notation, e.g., -1.2345678E123
-      case RQ_DOUBLE:     return 25;   // Scientific notation, e.g., -1.234567890123456E123
-      case RQ_VARCHAR:    return 255;  // Arbitrary, conservative default
-      case RQ_DATE:       return 10;   // "YYYY-MM-DD"
-      case RQ_TIME:       return 8;    // "HH:MM:SS"
-      case RQ_TIMESTAMP:  return 19;   // "YYYY-MM-DD HH:MM:SS"
-      case RQ_DATALINK:   return 255;  // URL, conservative default
-      case RQ_CLOB:       return 255;  // Large text, conservative default
-      case RQ_NCLOB:      return 255;  // Large national text
-      case RQ_NVARCHAR:   return 255;  // National text, conservative default
-      case RQ_BLOB:       return 255;  // Binary data, conservative default
-      default:                   return 4;    // Fallback for unknown types
-    }
+    return getJdbcTypeColumnDisplaySize(type);
   }
 
   @Override public String getColumnLabel(int column) throws SQLException {
@@ -194,27 +174,7 @@ public class L4RsMeta implements ResultSetMetaData {
     if (type == null || RQ_NULL.equalsIgnoreCase(type)) {
       return Object.class.getCanonicalName(); // For NULL columns
     }
-    var typeUpper = type.toUpperCase();
-    switch (typeUpper) {
-      case RQ_INTEGER:   return Integer.class.getCanonicalName();
-      case RQ_NUMERIC:   return java.math.BigDecimal.class.getCanonicalName();
-      case RQ_BOOLEAN:   return Boolean.class.getCanonicalName();
-      case RQ_TINYINT:   return Byte.class.getCanonicalName();
-      case RQ_SMALLINT:  return Short.class.getCanonicalName();
-      case RQ_BIGINT:    return Long.class.getCanonicalName();
-      case RQ_FLOAT:     return Float.class.getCanonicalName();
-      case RQ_DOUBLE:    return Double.class.getCanonicalName();
-      case RQ_VARCHAR:
-      case RQ_NVARCHAR:  return String.class.getCanonicalName();
-      case RQ_DATE:      return java.sql.Date.class.getCanonicalName();
-      case RQ_TIME:      return java.sql.Time.class.getCanonicalName();
-      case RQ_TIMESTAMP: return java.sql.Timestamp.class.getCanonicalName();
-      case RQ_DATALINK:  return java.net.URL.class.getCanonicalName();
-      case RQ_CLOB:      return java.sql.Clob.class.getCanonicalName();
-      case RQ_NCLOB:     return java.sql.NClob.class.getCanonicalName();
-      case RQ_BLOB:      return byte[].class.getCanonicalName();
-      default:                  return Object.class.getCanonicalName();
-    }
+    return getJdbcTypeClassName(type);
   }
 
   /* Support ResultSetMetaData and Wrapper. */

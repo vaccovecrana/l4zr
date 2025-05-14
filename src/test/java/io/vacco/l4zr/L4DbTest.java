@@ -8,7 +8,6 @@ import java.awt.GraphicsEnvironment;
 
 import static io.vacco.l4zr.jdbc.L4Db.*;
 import static j8spec.J8Spec.*;
-import static org.junit.Assert.*;
 
 @DefinedOrder
 @RunWith(J8SpecRunner.class)

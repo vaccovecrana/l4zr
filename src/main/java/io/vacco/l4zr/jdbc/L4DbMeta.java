@@ -3,7 +3,6 @@ package io.vacco.l4zr.jdbc;
 import io.vacco.l4zr.rqlite.*;
 import java.sql.*;
 import java.util.*;
-import java.util.regex.Pattern;
 
 import static io.vacco.l4zr.jdbc.L4Block.*;
 import static io.vacco.l4zr.jdbc.L4Err.*;
@@ -25,18 +24,6 @@ public class L4DbMeta implements DatabaseMetaData {
 
   private ResultSet executeQuery(String sql) throws SQLException {
     return new L4St(client).executeQuery(sql);
-  }
-
-  private boolean matchesPattern(String value, String pattern) {
-    if (pattern == null || pattern.equals("%")) {
-      return true;
-    }
-    if (value == null) {
-      return false;
-    }
-    // Convert SQL LIKE pattern to regex (e.g., % -> .*, _ -> .)
-    var regex = pattern.replace("%", ".*").replace("_", ".");
-    return Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(value).matches();
   }
 
   // General Database Properties
@@ -553,7 +540,6 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException {
-    // SQLite does not support schemas or catalogs, treat catalog as database name
     return sqlRun(() -> new L4Rs(
       dbGetTables(catalog, schemaPattern, tableNamePattern, types, client), null)
     );

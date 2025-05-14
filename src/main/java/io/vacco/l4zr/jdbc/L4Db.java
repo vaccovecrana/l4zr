@@ -242,9 +242,9 @@ public class L4Db {
       "         0 AS BUFFER_LENGTH, 0 AS DECIMAL_DIGITS, 0 AS PSEUDO_COLUMN",
       ") WHERE 1 = 0"
     )).first().setTypes(
-      RQ_SMALLINT, RQ_VARCHAR, RQ_INTEGER,
+      RQ_INTEGER, RQ_VARCHAR, RQ_INTEGER,
       RQ_VARCHAR, RQ_INTEGER, RQ_INTEGER,
-      RQ_SMALLINT, RQ_SMALLINT
+      RQ_INTEGER, RQ_INTEGER
     );
     var pkRs = dbGetPrimaryKeys(catalog, schema, table, client);
     pkRs.forEach((i, pkr) -> {
@@ -255,11 +255,11 @@ public class L4Db {
         var nfi = nFlag != null ? Integer.parseInt(nFlag) : -1;
         if (!nullable || nfi == DatabaseMetaData.columnNoNulls) {
           out.addRow(
-            itoa(DatabaseMetaData.bestRowTransaction),
+            itoa(DatabaseMetaData.bestRowSession),
             colRs.get(COLUMN_NAME, cr), colRs.get(DATA_TYPE, cr),
             colRs.get(TYPE_NAME, cr), colRs.get(COLUMN_SIZE, cr),
             colRs.get(BUFFER_LENGTH, cr), colRs.get(DECIMAL_DIGITS, cr),
-            itoa(DatabaseMetaData.bestRowSession)
+            itoa(DatabaseMetaData.bestRowNotPseudo)
           );
         }
       });
@@ -279,9 +279,8 @@ public class L4Db {
     )).first().setTypes(
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
-      RQ_VARCHAR, RQ_VARCHAR, RQ_SMALLINT,
-      RQ_SMALLINT, RQ_SMALLINT, RQ_VARCHAR,
-      RQ_VARCHAR, RQ_SMALLINT
+      RQ_VARCHAR, RQ_VARCHAR, RQ_INTEGER, RQ_INTEGER,
+      RQ_INTEGER, RQ_VARCHAR, RQ_VARCHAR, RQ_SMALLINT
     );
     var tab = table.replace("'", "''");
     var rs = client.querySingle(format("PRAGMA foreign_key_list('%s')", tab)).first();
@@ -326,7 +325,7 @@ public class L4Db {
       RQ_VARCHAR, RQ_SMALLINT
     );
     // Find all tables with foreign keys referencing this table
-    var tables = dbGetTables(catalog,"%", null, new String[]{ TABLE }, client);
+    var tables = dbGetTables(catalog,null, null, new String[] { TABLE }, client);
     tables.forEach((i, row) -> {
       var fkTable = tables.get(TABLE_NAME, row).replace("'", "''");
       var fkRs = client.querySingle(format("PRAGMA foreign_key_list('%s')", fkTable)).first();

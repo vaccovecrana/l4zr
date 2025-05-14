@@ -449,18 +449,18 @@ public class L4DbMetaTest {
         rs = meta.getImportedKeys(null, null, "related_table");
         rows = readResultSet(rs);
         assertEquals(1, rows.size());
-        Map<String, Object> fk = rows.get(0);
-        assertEquals("main", fk.get("PKTABLE_CAT"));
+        var fk = rows.get(0);
+        assertNull(fk.get("PKTABLE_CAT"));
         assertNull(fk.get("PKTABLE_SCHEM"));
         assertEquals("metadata_table", fk.get("PKTABLE_NAME"));
         assertEquals("id", fk.get("PKCOLUMN_NAME"));
-        assertEquals("main", fk.get("FKTABLE_CAT"));
+        assertNull(fk.get("FKTABLE_CAT"));
         assertNull(fk.get("FKTABLE_SCHEM"));
         assertEquals("related_table", fk.get("FKTABLE_NAME"));
         assertEquals("test_id", fk.get("FKCOLUMN_NAME"));
         assertEquals(1, fk.get("KEY_SEQ"));
-        assertEquals(DatabaseMetaData.importedKeyRestrict, fk.get("UPDATE_RULE"));
-        assertEquals(DatabaseMetaData.importedKeyRestrict, fk.get("DELETE_RULE"));
+        assertEquals(DatabaseMetaData.importedKeyNoAction, fk.get("UPDATE_RULE"));
+        assertEquals(DatabaseMetaData.importedKeyNoAction, fk.get("DELETE_RULE"));
         assertNotNull(fk.get("FK_NAME"));
         assertNotNull(fk.get("PK_NAME"));
 

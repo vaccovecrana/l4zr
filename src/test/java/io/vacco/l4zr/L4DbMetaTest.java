@@ -125,7 +125,7 @@ public class L4DbMetaTest {
         assertTrue(meta.getDatabaseProductVersion().matches("\\d+\\.\\d+\\.\\d+"));
         assertEquals(4, meta.getJDBCMajorVersion());
         assertEquals(0, meta.getJDBCMinorVersion());
-        assertEquals("rqlite JDBC Driver", meta.getDriverName());
+        assertEquals("l4zr/rqlite", meta.getDriverName());
         assertEquals("1.0", meta.getDriverVersion());
         assertEquals(1, meta.getDriverMajorVersion());
         assertEquals(0, meta.getDriverMinorVersion());
@@ -353,7 +353,7 @@ public class L4DbMetaTest {
         assertNull(row.get("TABLE_CAT"));
         assertNull(row.get("TABLE_SCHEM"));
         assertEquals("metadata_table", row.get("TABLE_NAME"));
-        assertEquals("TABLE", row.get("TABLE_TYPE"));
+        assertEquals("table", row.get("TABLE_TYPE"));
         assertNull(row.get("REMARKS"));
         assertNull(row.get("TYPE_CAT"));
         assertNull(row.get("TYPE_SCHEM"));
@@ -514,11 +514,11 @@ public class L4DbMetaTest {
 
       // Metadata Queries: Type Info
       it("Tests type info metadata", () -> {
-        ResultSet rs = meta.getTypeInfo();
+        var rs = meta.getTypeInfo();
         var rows = readResultSet(rs);
         assertTrue(rows.size() >= RQ_TYPES.length);
-        Set<String> typeNames = new HashSet<>();
-        for (Map<String, Object> row : rows) {
+        var typeNames = new HashSet<String>();
+        for (var row : rows) {
           typeNames.add((String) row.get("TYPE_NAME"));
           assertNotNull(row.get("DATA_TYPE"));
           assertNotNull(row.get("PRECISION"));
@@ -535,7 +535,7 @@ public class L4DbMetaTest {
           assertNotNull(row.get("SQL_DATETIME_SUB"));
           assertNotNull(row.get("NUM_PREC_RADIX"));
         }
-        for (String rqType : RQ_TYPES) {
+        for (var rqType : RQ_TYPES) {
           assertTrue("Missing type: " + rqType, typeNames.contains(rqType));
         }
       });

@@ -38,6 +38,7 @@ public class L4Jdbc {
   public static final String RQ_BIGINT    = "BIGINT";
   public static final String RQ_FLOAT     = "FLOAT";
   public static final String RQ_DOUBLE    = "DOUBLE";
+  public static final String RQ_TEXT      = "TEXT";
   public static final String RQ_VARCHAR   = "VARCHAR";
   public static final String RQ_DATE      = "DATE";
   public static final String RQ_TIME      = "TIME";
@@ -345,23 +346,25 @@ public class L4Jdbc {
       throw badType(columnIndex, value);
     }
     Object result;
-    if (type == String.class && anyOf(sourceJdbcType, VARCHAR, CLOB, NCLOB, NVARCHAR)) {
+    if (type == String.class) {
       result = value;
-    } else if (type == Integer.class && anyOf(sourceJdbcType, INTEGER, TINYINT, SMALLINT, BOOLEAN, NUMERIC)) {
+    } else if (type == Integer.class) {
       result = castInteger(value, columnIndex, sourceJdbcType);
-    } else if (type == Long.class && anyOf(sourceJdbcType, INTEGER, BIGINT, TINYINT, SMALLINT, BOOLEAN, NUMERIC)) {
+    } else if (type == Long.class) {
       result = castLong(value, columnIndex, sourceJdbcType);
-    } else if (type == Float.class && anyOf(sourceJdbcType, FLOAT, DOUBLE, NUMERIC)) {
+    } else if (type == Float.class) {
       result = castFloat(value, columnIndex, sourceJdbcType);
-    } else if (type == Double.class && anyOf(sourceJdbcType, FLOAT, DOUBLE, NUMERIC)) {
+    } else if (type == Double.class) {
       result = castDouble(value, columnIndex, sourceJdbcType);
-    } else if (type == Byte.class && anyOf(sourceJdbcType, INTEGER, TINYINT, BOOLEAN, NUMERIC)) {
+    } else if (type == Byte.class) {
       result = castByte(value, columnIndex, sourceJdbcType);
-    } else if (type == Short.class && anyOf(sourceJdbcType, INTEGER, TINYINT, SMALLINT, BOOLEAN, NUMERIC)) {
+    } else if (type == Short.class) {
       result = castShort(value, columnIndex, sourceJdbcType);
-    } else if (type == BigDecimal.class && anyOf(sourceJdbcType, INTEGER, FLOAT, DOUBLE, VARCHAR, NUMERIC, BOOLEAN, TINYINT, SMALLINT, BIGINT)) {
+    } else if (type == BigDecimal.class) {
       result = castBigDecimal(value, columnIndex, sourceJdbcType, -1);
-    } else if (type == byte[].class && sourceJdbcType == BLOB) {
+    } else if (type == Boolean.class) {
+      result = castBoolean(value, columnIndex, sourceJdbcType);
+    } else if (type == byte[].class) {
       result = castBlob(value, columnIndex, sourceJdbcType);
     } else {
       throw badConversion(columnIndex, sourceJdbcType, type);
@@ -455,6 +458,7 @@ public class L4Jdbc {
       case RQ_BIGINT:     return BIGINT;
       case RQ_FLOAT:      return FLOAT;
       case RQ_DOUBLE:     return DOUBLE;
+      case RQ_TEXT:
       case RQ_VARCHAR:    return VARCHAR;
       case RQ_DATE:       return DATE;
       case RQ_TIME:       return TIME;

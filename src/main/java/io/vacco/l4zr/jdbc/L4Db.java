@@ -411,7 +411,8 @@ public class L4Db {
       RQ_VARCHAR, RQ_SMALLINT, RQ_BOOLEAN,
       RQ_SMALLINT, RQ_BOOLEAN, RQ_BOOLEAN,
       RQ_BOOLEAN, RQ_VARCHAR, RQ_SMALLINT,
-      RQ_SMALLINT, RQ_INTEGER, RQ_INTEGER
+      RQ_SMALLINT, RQ_INTEGER, RQ_INTEGER,
+      RQ_INTEGER
     );
     for (var rqt : RQ_TYPES) {
       var jt = getJdbcType(rqt);

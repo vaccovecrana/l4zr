@@ -196,4 +196,8 @@ public class L4Db {
     return out;
   }
 
+  public static L4Result dbGetBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable, L4Client client) {
+
+  }
+
 }

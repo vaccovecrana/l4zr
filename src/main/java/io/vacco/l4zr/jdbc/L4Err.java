@@ -18,7 +18,8 @@ public class L4Err {
     SqlStateInvalidAttr         = "HY092",
     SqlStateInvalidType         = "22005",
     SqlStateInvalidQuery        = "42000",
-    SqlStateConnectionError     = "08S01";
+    SqlStateConnectionError     = "08S01",
+    SqlStateInvalidTransaction  = "25000";
 
   public static SQLException generalError(String msg) {
     return new SQLException(msg, SqlStateGeneralError);
@@ -215,6 +216,10 @@ public class L4Err {
 
   public static SQLException badExec(Exception e) {
     return new SQLException(format("Execution failed: %s", e.getMessage()), SqlStateConnectionError, e);
+  }
+
+  public static SQLException badState(String msg) {
+    return new SQLException(msg, SqlStateInvalidTransaction);
   }
 
   public static SQLException rsClosed() {

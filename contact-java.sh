@@ -20,7 +20,7 @@ if [ ! -r "$input_dir" ]; then
   exit 1
 fi
 
-output_file="$(dirname "$0")/out.md"
+output_file="$(dirname "$0")/out.txt"
 
 > "$output_file"
 

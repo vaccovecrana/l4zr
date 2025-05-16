@@ -143,27 +143,23 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public String getSQLKeywords() {
-    // TODO SQLite keywords (subset, verify/extend as needed)
-    return "ABORT,AFTER,ANALYZE,ATTACH,AUTOINCREMENT,BEFORE,BEGIN,COMMIT,CONFLICT," +
-      "DATABASE,DEFERRED,DETACH,EXCLUSIVE,EXPLAIN,FAIL,IMMEDIATE,INDEXED,INSTEAD," +
-      "ISNULL,NOTNULL,PLAN,PRAGMA,RECURSIVE,REINDEX,RELEASE,RENAME,REPLACE,RESTRICT," +
-      "ROLLBACK,SAVEPOINT,TEMP,TEMPORARY,TRANSACTION,TRIGGER,VACUUM,VIEW,VIRTUAL";
+    return Keywords;
   }
 
   @Override public String getNumericFunctions() {
-    return "ABS,COALESCE,MAX,MIN,RANDOM,ROUND,SUM,TOTAL";
+    return FnNumeric;
   }
 
   @Override public String getStringFunctions() {
-    return "LENGTH,LOWER,UPPER,TRIM,LTRIM,RTRIM,REPLACE,SUBSTR,INSTR";
+    return FnString;
   }
 
   @Override public String getSystemFunctions() {
-    return "IFNULL,NULLIF,QUOTE,SQLITE_VERSION";
+    return FnSystem;
   }
 
   @Override public String getTimeDateFunctions() {
-    return "DATE,TIME,DATETIME,JULIANDAY,STRFTIME";
+    return FnDateTime;
   }
 
   @Override public String getSearchStringEscape() {

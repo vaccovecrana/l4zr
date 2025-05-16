@@ -12,6 +12,26 @@ import static java.util.stream.Collectors.toList;
 
 public class L4Db {
 
+  public static final String Keywords = join(",",
+    "ACTION,ADD,AFTER,ALL,ALTER,ANALYZE,AND,AS,ASC,ATTACH,AUTOINCREMENT,",
+    "BEFORE,BEGIN,BETWEEN,BY,",
+    "CASCADE,CASE,CAST,CHECK,COLLATE,COLUMN,COMMIT,CONFLICT,CONSTRAINT,CREATE,",
+    "CROSS,CURRENT_DATE,CURRENT_TIME,CURRENT_TIMESTAMP,",
+    "DATABASE,DEFAULT,DEFERRABLE,DEFERRED,DELETE,DESC,DETACH,DISTINCT,DROP,",
+    "EACH,ELSE,END,ESCAPE,EXCEPT,EXCLUSIVE,EXISTS,EXPLAIN,",
+    "FAIL,FOR,FOREIGN,FROM,FULL,GLOB,GROUP,HAVING,",
+    "IF,IGNORE,IMMEDIATE,IN,INDEX,INDEXED,INITIALLY,INNER,INSERT,INSTEAD,INTERSECT,INTO,IS,ISNULL,",
+    "JOIN,KEY,LEFT,LIKE,LIMIT,MATCH,NATURAL,NO,NOT,NOTNULL,NULL,OF,OFFSET,ON,OR,ORDER,OUTER,",
+    "PLAN,PRAGMA,PRIMARY,QUERY,RAISE,RECURSIVE,REFERENCES,REGEXP,REINDEX,RELEASE,RENAME,REPLACE,",
+    "RESTRICT,RIGHT,ROLLBACK,ROW,SAVEPOINT,SELECT,SET,TABLE,TEMP,TEMPORARY,THEN,TO,TRANSACTION,",
+    "TRIGGER,UNION,UNIQUE,UPDATE,USING,VACUUM,VALUES,VIEW,VIRTUAL,WHEN,WHERE,WITH,WITHOUT"
+  );
+
+  public static final String FnNumeric  = "abs,coalesce,likelihood,likely,max,min,random,randomblob,round,sign,unlikely,zeroblob";
+  public static final String FnString   = "char,concat,concat_ws,format,glob,hex,instr,length,like,lower,ltrim,octet_length,printf,replace,rtrim,soundex,substr,substring,trim,unicode,unhex,upper";
+  public static final String FnSystem   = "changes,iif,ifnull,last_insert_rowid,nullif,quote,sqlite_compileoption_get,sqlite_compileoption_used,sqlite_offset,sqlite_source_id,sqlite_version,total_changes,typeof";
+  public static final String FnDateTime = "date,datetime,julianday,strftime,time";
+
   public static final String
     BUFFER_LENGTH = "BUFFER_LENGTH",
     CASCADE = "CASCADE", COLUMN_NAME = "COLUMN_NAME", COLUMN_SIZE = "COLUMN_SIZE",
@@ -30,7 +50,7 @@ public class L4Db {
     FKTABLE_CAT = "FKTABLE_CAT", FKTABLE_SCHEM = "FKTABLE_SCHEM", FKTABLE_NAME = "FKTABLE_NAME",
     FKCOLUMN_NAME = "FKCOLUMN_NAME",
 
-    kFrom = "from",
+    kDesc = "desc", kFrom = "from",
     kName = "name", kOnDelete = "on_delete",
     kTable = "table", kTemp = "temp", kTo = "to",
     kType = "type", kNotNull = "notnull",
@@ -51,6 +71,8 @@ public class L4Db {
   private static String btoa(boolean b) {
     return Boolean.toString(b);
   }
+
+  private static boolean atob(String val) { return Boolean.parseBoolean(val); }
 
   private static boolean matchesPattern(String value, String pattern) {
     if (pattern == null || pattern.equals("%")) {
@@ -74,16 +96,19 @@ public class L4Db {
       typeFilter = " WHERE type = 'view'";
     } else if (typeSet.contains(TABLE) && !typeSet.contains(VIEW)) {
       typeFilter = " WHERE type = 'table'";
+    } else {
+      typeFilter = "WHERE (type = 'table' OR type = 'view')";
     }
     var sql = join("\n", "",
       "SELECT ",
       "  NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, name AS TABLE_NAME, ",
       "  type AS TABLE_TYPE, NULL AS REMARKS, NULL AS TYPE_CAT, NULL AS TYPE_SCHEM, ",
       "  NULL AS TYPE_NAME, NULL AS SELF_REFERENCING_COL_NAME, NULL AS REF_GENERATION",
-      "FROM sqlite_master%s ",
-      "WHERE name LIKE '%s' AND (type = 'table' OR type = 'view')"
+      "FROM sqlite_master",
+      "%s",
+      "AND name LIKE '%s'"
     );
-    tableNamePattern = tableNamePattern == null ? "%" : tableNamePattern.replace("'", "''");
+    tableNamePattern = tableNamePattern == null ? "%" : quote(tableNamePattern);
     sql = format(sql, typeFilter, tableNamePattern);
     var response = client.querySingle(sql);
     var res = response.first().setTypes(
@@ -154,7 +179,7 @@ public class L4Db {
     tables.forEach((i, row) -> {
       var tableName = out.get(TABLE_NAME, row);
       var tableCatalog = out.get(TABLE_CAT, row);
-      var ti = client.querySingle(format("PRAGMA table_info('%s')", tableName.replace("'", "''")));
+      var ti = client.querySingle(format("PRAGMA table_info('%s')", quote(tableName)));
       var res0 = ti.first();
 
       res0.forEach((j, row0) -> {
@@ -216,7 +241,7 @@ public class L4Db {
     if (schema != null && !schema.isEmpty()) { // SQLite does not support schemas
       return out;
     }
-    var tab = table.replace("'", "''");
+    var tab = quote(table);
     var res = client.querySingle(format("PRAGMA table_info('%s')", tab)).first();
     final var keySeq = new int[] { 1 };
     res.forEach((i, row) -> {
@@ -282,7 +307,7 @@ public class L4Db {
       RQ_VARCHAR, RQ_VARCHAR, RQ_INTEGER, RQ_INTEGER,
       RQ_INTEGER, RQ_VARCHAR, RQ_VARCHAR, RQ_SMALLINT
     );
-    var tab = table.replace("'", "''");
+    var tab = quote(table);
     var rs = client.querySingle(format("PRAGMA foreign_key_list('%s')", tab)).first();
     rs.forEach((i, row) -> {
       var seq = Integer.toString(Integer.parseInt(rs.get(kSeq, row)) + 1);
@@ -327,7 +352,7 @@ public class L4Db {
     // Find all tables with foreign keys referencing this table
     var tables = dbGetTables(catalog,null, null, new String[] { TABLE }, client);
     tables.forEach((i, row) -> {
-      var fkTable = tables.get(TABLE_NAME, row).replace("'", "''");
+      var fkTable = quote(tables.get(TABLE_NAME, row));
       var fkRs = client.querySingle(format("PRAGMA foreign_key_list('%s')", fkTable)).first();
       fkRs.forEach((j, row0) -> {
         if (table.equals(fkRs.get(kTable, row0))) {
@@ -442,21 +467,31 @@ public class L4Db {
     )).first().setTypes(
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
       RQ_BOOLEAN, RQ_VARCHAR, RQ_VARCHAR, RQ_SMALLINT,
-      RQ_SMALLINT, RQ_VARCHAR, RQ_VARCHAR, RQ_BIGINT,
+      RQ_INTEGER, RQ_VARCHAR, RQ_VARCHAR, RQ_BIGINT,
       RQ_BIGINT, RQ_VARCHAR
     );
-    var rs = client.querySingle(format("PRAGMA index_list('%s')", table.replace("'", "''"))).first();
+    var rs = client.querySingle(format("PRAGMA index_list('%s')", quote(table))).first();
     rs.forEach((i, row) -> {
       var indexName = rs.get(kName, row);
       var isUnique = atoi(rs.get(kUnique, row)) == 1;
-      var idxInfo = client.querySingle(format("PRAGMA index_info('%s')", indexName.replace("'", "''"))).first();
+      var idxInfo = client.querySingle(format("PRAGMA index_info('%s')", quote(indexName))).first();
+      var iexInfo = client.querySingle(format("PRAGMA index_xinfo('%s')", quote(indexName))).first();
       idxInfo.forEach((j, row0) -> {
         var skip = unique && !isUnique;
         if (!skip) {
+          var colName = idxInfo.get(kName, row0);
+          var colSort = new String[1];
+          iexInfo.forEach((k, row1) -> {
+            var colMatch = iexInfo.get(kName, row1);
+            var desc = atob(iexInfo.get(kDesc, row1));
+            if (colName.equals(colMatch)) {
+              colSort[0] = desc ? "D" : "A";
+            }
+          });
           out.addRow(
             catalog, null, table,
-            btoa(isUnique), null, indexName, itoa(DatabaseMetaData.tableIndexOther),
-            itoa(atoi(idxInfo.get(kSeqNo, row0)) + 1), idxInfo.get(kName, row), null, itoa(0),
+            btoa(!isUnique), null, indexName, itoa(DatabaseMetaData.tableIndexOther),
+            itoa(atoi(idxInfo.get(kSeqNo, row0)) + 1), colName, colSort[0], itoa(0),
             itoa(0), null
           );
         }

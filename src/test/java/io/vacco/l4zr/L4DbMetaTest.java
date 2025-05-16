@@ -1,6 +1,6 @@
 package io.vacco.l4zr;
 
-import io.vacco.l4zr.jdbc.L4DbMeta;
+import io.vacco.l4zr.jdbc.*;
 import io.vacco.l4zr.rqlite.*;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
@@ -41,8 +41,7 @@ public class L4DbMetaTest {
     return rows;
   }
 
-  // Helper to create test tables
-  private static void setupTables() throws SQLException {
+  private static void setupTables() {
     // Drop existing tables
     rq.executeSingle("DROP TABLE IF EXISTS metadata_table");
     rq.executeSingle("DROP TABLE IF EXISTS related_table");
@@ -72,6 +71,9 @@ public class L4DbMetaTest {
     );
     var res = rq.executeSingle(createTable);
     assertEquals(200, res.statusCode);
+
+    var createIndex = "CREATE UNIQUE INDEX metadata_index ON metadata_table(small_val)";
+    assertEquals(200, rq.executeSingle(createIndex).statusCode);
 
     // Create related_table with foreign key
     var createRelatedTable = join("\n", "",
@@ -149,8 +151,7 @@ public class L4DbMetaTest {
 
       // SQL Keywords and Identifiers
       it("Tests SQL keywords and identifier methods", () -> {
-        var expectedKeywords = "ANALYZE,ATTACH,DETACH,EXPLAIN,INDEXED,PRAGMA,REINDEX,TRIGGER,VACUUM,VIEW,VIRTUAL";
-        assertEquals(expectedKeywords, meta.getSQLKeywords());
+        assertEquals(L4Db.Keywords, meta.getSQLKeywords());
         assertEquals("\\", meta.getSearchStringEscape());
         assertEquals("", meta.getExtraNameCharacters());
         assertEquals("schema", meta.getSchemaTerm());
@@ -162,10 +163,10 @@ public class L4DbMetaTest {
 
       // Function Lists
       it("Tests function list methods", () -> {
-        assertEquals("ABS,COALESCE,MAX,MIN,RANDOM,ROUND,SUM,TOTAL", meta.getNumericFunctions());
-        assertEquals("LENGTH,LOWER,UPPER,TRIM,LTRIM,RTRIM,REPLACE,SUBSTR,INSTR", meta.getStringFunctions());
-        assertEquals("IFNULL,NULLIF,QUOTE,SQLITE_VERSION", meta.getSystemFunctions());
-        assertEquals("DATE,TIME,DATETIME,JULIANDAY,STRFTIME", meta.getTimeDateFunctions());
+        assertEquals(L4Db.FnNumeric, meta.getNumericFunctions());
+        assertEquals(L4Db.FnString, meta.getStringFunctions());
+        assertEquals(L4Db.FnSystem, meta.getSystemFunctions());
+        assertEquals(L4Db.FnDateTime, meta.getTimeDateFunctions());
       });
 
       // SQL Feature Support
@@ -366,7 +367,7 @@ public class L4DbMetaTest {
         rows = readResultSet(rs);
         assertTrue(rows.size() >= 2); // metadata_table and related_table
         boolean foundTestData = false;
-        for (Map<String, Object> row2 : rows) {
+        for (var row2 : rows) {
           if ("metadata_table".equals(row2.get("TABLE_NAME"))) {
             foundTestData = true;
             break;
@@ -393,18 +394,18 @@ public class L4DbMetaTest {
         assertEquals(10, idColumn.get("COLUMN_SIZE"));
         assertEquals(0, idColumn.get("DECIMAL_DIGITS"));
         assertEquals(10, idColumn.get("NUM_PREC_RADIX"));
-        assertEquals(DatabaseMetaData.columnNullableUnknown, idColumn.get("NULLABLE"));
+        assertEquals(DatabaseMetaData.columnNoNulls, idColumn.get("NULLABLE"));
         assertNull(idColumn.get("REMARKS"));
         assertNull(idColumn.get("COLUMN_DEF"));
-        assertEquals(0, idColumn.get("CHAR_OCTET_LENGTH"));
+        assertEquals(10, idColumn.get("CHAR_OCTET_LENGTH"));
         assertEquals(1, idColumn.get("ORDINAL_POSITION"));
-        assertEquals("", idColumn.get("IS_NULLABLE"));
+        assertEquals(L4Db.NO, idColumn.get("IS_NULLABLE"));
         assertNull(idColumn.get("SCOPE_CATALOG"));
         assertNull(idColumn.get("SCOPE_SCHEMA"));
         assertNull(idColumn.get("SCOPE_TABLE"));
         assertEquals(0, idColumn.get("SOURCE_DATA_TYPE"));
-        assertEquals("YES", idColumn.get("IS_AUTOINCREMENT"));
-        assertEquals("NO", idColumn.get("IS_GENERATEDCOLUMN"));
+        assertEquals(L4Db.YES, idColumn.get("IS_AUTOINCREMENT"));
+        assertEquals(L4Db.NO, idColumn.get("IS_GENERATEDCOLUMN"));
       });
 
       // Metadata Queries: Privileges
@@ -469,11 +470,11 @@ public class L4DbMetaTest {
         rows = readResultSet(rs);
         assertEquals(1, rows.size());
         Map<String, Object> ek = rows.get(0);
-        assertEquals("main", ek.get("PKTABLE_CAT"));
+        assertNull(ek.get("PKTABLE_CAT"));
         assertNull(ek.get("PKTABLE_SCHEM"));
         assertEquals("metadata_table", ek.get("PKTABLE_NAME"));
         assertEquals("id", ek.get("PKCOLUMN_NAME"));
-        assertEquals("main", ek.get("FKTABLE_CAT"));
+        assertNull(ek.get("FKTABLE_CAT"));
         assertNull(ek.get("FKTABLE_SCHEM"));
         assertEquals("related_table", ek.get("FKTABLE_NAME"));
         assertEquals("test_id", ek.get("FKCOLUMN_NAME"));
@@ -483,29 +484,29 @@ public class L4DbMetaTest {
         rows = readResultSet(rs);
         assertEquals(1, rows.size());
         Map<String, Object> cr = rows.get(0);
-        assertEquals("main", cr.get("PKTABLE_CAT"));
+        assertNull(cr.get("PKTABLE_CAT"));
         assertEquals("metadata_table", cr.get("PKTABLE_NAME"));
         assertEquals("id", cr.get("PKCOLUMN_NAME"));
-        assertEquals("main", cr.get("FKTABLE_CAT"));
+        assertNull(cr.get("FKTABLE_CAT"));
         assertEquals("related_table", cr.get("FKTABLE_NAME"));
         assertEquals("test_id", cr.get("FKCOLUMN_NAME"));
 
         // getIndexInfo
         rs = meta.getIndexInfo(null, null, "metadata_table", true, false);
         rows = readResultSet(rs);
-        assertTrue(rows.size() >= 1); // At least primary key index
+        assertFalse(rows.isEmpty()); // At least primary key index
         boolean foundPkIndex = false;
-        for (Map<String, Object> row : rows) {
-          if ("id".equals(row.get("COLUMN_NAME")) && "PRIMARY".equals(row.get("INDEX_NAME"))) {
+        for (var row : rows) {
+          if ("small_val".equals(row.get("COLUMN_NAME")) && "metadata_index".equals(row.get("INDEX_NAME"))) {
             foundPkIndex = true;
-            assertEquals("main", row.get("TABLE_CAT"));
+            assertNull(row.get("TABLE_CAT"));
             assertNull(row.get("TABLE_SCHEM"));
             assertEquals("metadata_table", row.get("TABLE_NAME"));
             assertFalse((Boolean) row.get("NON_UNIQUE"));
-            assertEquals("id", row.get("COLUMN_NAME"));
+            assertEquals("small_val", row.get("COLUMN_NAME"));
             assertEquals(1, row.get("ORDINAL_POSITION"));
             assertEquals("A", row.get("ASC_OR_DESC"));
-            assertEquals(DatabaseMetaData.tableIndexClustered, row.get("TYPE"));
+            assertEquals(DatabaseMetaData.tableIndexOther, row.get("TYPE"));
             break;
           }
         }

@@ -559,6 +559,10 @@ public class L4Jdbc {
     return rawSql.toUpperCase().contains("SELECT");
   }
 
+  public static String quote(String val) {
+    return val.replace("'", "''");
+  }
+
   public static L4Statement[] split(String rawSql) {
     if (rawSql == null) {
       throw new IllegalArgumentException("SQL string cannot be null");

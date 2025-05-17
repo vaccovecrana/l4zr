@@ -1,51 +1,41 @@
 package io.vacco.l4zr.jdbc;
 
-import io.vacco.l4zr.rqlite.L4Client;
+import io.vacco.l4zr.rqlite.*;
 import java.sql.*;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.Executor;
 
+import static java.lang.String.*;
 import static io.vacco.l4zr.jdbc.L4Err.*;
 
 public class L4Conn implements Connection {
 
-  private final L4Client client; // rqlite client for database interactions
-  private boolean isClosed; // Tracks connection state
-  private boolean autoCommit; // Auto-commit mode
-  private int transactionIsolation; // Transaction isolation level
-  private Properties clientInfo; // Client info properties
-  private String catalog; // Current catalog (database)
-  private String schema; // Current schema
-  private int holdability; // ResultSet holdability
-  private SQLWarning warnings; // SQL warnings chain
-  private Map<String, Class<?>> typeMap; // Custom type mapping
+  private final L4Client client;
+  private final L4DbMeta meta;
+  private final Properties clientInfo;
 
-  /**
-   * Constructor initializing the connection with an L4Client.
-   *
-   * @param client The L4Client instance connected to rqlite
-   * @throws SQLException If initialization fails
-   */
+  private boolean isClosed;
+  private int holdability;
+
+  private String schema;
+  private Map<String, Class<?>> typeMap;
+
   public L4Conn(L4Client client) throws SQLException {
     if (client == null) {
       throw new SQLException("L4Client cannot be null", SqlStateInvalidParam);
     }
     this.client = client;
     this.isClosed = false;
-    this.autoCommit = true; // Default per JDBC spec
-    this.transactionIsolation = Connection.TRANSACTION_READ_COMMITTED; // Default
     this.clientInfo = new Properties();
-    this.holdability = ResultSet.HOLD_CURSORS_OVER_COMMIT; // Default
-    this.warnings = null;
+    this.holdability = ResultSet.HOLD_CURSORS_OVER_COMMIT;
     this.typeMap = null;
-    this.catalog = null;
     this.schema = null;
+    this.meta = new L4DbMeta(client);
   }
 
   private void checkClosed() throws SQLException {
     if (isClosed) {
-      throw new SQLException("Connection is closed", SqlStateGeneralError);
+      throw badState("Connection is closed");
     }
   }
 
@@ -62,10 +52,9 @@ public class L4Conn implements Connection {
     validateResultSetParams(resultSetType, resultSetConcurrency);
     if (resultSetHoldability != ResultSet.HOLD_CURSORS_OVER_COMMIT &&
       resultSetHoldability != ResultSet.CLOSE_CURSORS_AT_COMMIT) {
-      throw new SQLException("Invalid holdability", SqlStateInvalidParam);
+      throw badParam("Invalid holdability");
     }
   }
-
 
   @Override public Statement createStatement() throws SQLException {
     checkClosed();
@@ -87,31 +76,25 @@ public class L4Conn implements Connection {
     return sql;
   }
 
-  @Override
-  public void setAutoCommit(boolean autoCommit) throws SQLException {
+  @Override public void setAutoCommit(boolean autoCommit) throws SQLException {
     checkClosed();
-    // rqlite does not support transactions in the traditional sense
-    // You may need to implement logic to simulate auto-commit behavior
-    this.autoCommit = autoCommit;
-    // If autoCommit is false, you might need to start a transaction via client
-    if (!autoCommit) {
-      // Placeholder: Implement rqlite transaction begin if supported
-      throw new SQLException("Transactions not fully supported", SqlStateFeatureNotSupported);
-    }
+    throw notSupported(join("", "",
+      "Auto-commit cannot be changed; rqlite executes all statements atomically.",
+      "Use Statement.addBatch() and executeBatch() for transactions."
+    ));
   }
 
-  @Override
-  public boolean getAutoCommit() throws SQLException {
+  @Override public boolean getAutoCommit() throws SQLException {
     checkClosed();
-    return autoCommit;
+    return L4Options.transaction;
   }
 
   @Override public void commit() throws SQLException {
     checkClosed();
-    if (autoCommit) {
-      throw badState("Cannot commit in auto-commit mode");
-    }
-    throw new SQLException("Commit not supported", SqlStateFeatureNotSupported);
+    throw notSupported(join("", "",
+      "Manual commit not supported; rqlite executes all statements atomically. ",
+      "Use Statement.addBatch() and executeBatch() for transactions."
+    ));
   }
 
   @Override public void rollback() throws SQLException {
@@ -119,180 +102,143 @@ public class L4Conn implements Connection {
     throw notSupported("Rollback not supported");
   }
 
-  @Override
-  public void close() throws SQLException {
+  @Override public void close() throws SQLException {
     if (isClosed) {
       return;
     }
     isClosed = true;
-    // Perform any cleanup, e.g., close L4Client resources
-    // Note: L4Client may need a close method
+    this.client.close();
   }
 
-  @Override
-  public boolean isClosed() throws SQLException {
+  @Override public boolean isClosed() {
     return isClosed;
   }
 
   @Override public DatabaseMetaData getMetaData() throws SQLException {
     checkClosed();
-    return new L4DbMeta(client, this);
+    return meta;
   }
 
-  @Override
-  public void setReadOnly(boolean readOnly) throws SQLException {
-    checkClosed();
-    // rqlite may not support read-only mode; log or ignore
-    // If supported, configure client accordingly
+  @Override public void setReadOnly(boolean readOnly) throws SQLException {
+    checkClosed(); // no-op
   }
 
-  @Override
-  public boolean isReadOnly() throws SQLException {
+  @Override public boolean isReadOnly() throws SQLException {
     checkClosed();
-    // Assume read-write unless client indicates otherwise
     return false;
   }
 
-  @Override
-  public void setCatalog(String catalog) throws SQLException {
+  @Override public void setCatalog(String catalog) throws SQLException {
     checkClosed();
-    // rqlite may not support catalogs; store or validate if applicable
-    this.catalog = catalog;
+    throw notSupported("Catalog switching");
   }
 
-  @Override
-  public String getCatalog() throws SQLException {
+  @Override public String getCatalog() throws SQLException {
     checkClosed();
-    return catalog;
+    return "";
   }
 
-  @Override
-  public void setTransactionIsolation(int level) throws SQLException {
+  @Override public void setTransactionIsolation(int level) throws SQLException {
     checkClosed();
-    // Validate supported levels; rqlite may only support a subset
-    switch (level) {
-      case TRANSACTION_NONE:
-      case TRANSACTION_READ_COMMITTED:
-        this.transactionIsolation = level;
-        break;
-      default:
-        throw new SQLException("Unsupported transaction isolation level", SqlStateFeatureNotSupported);
+    if (level != TRANSACTION_SERIALIZABLE) {
+      throw notSupported(format("transaction isolation level: [%d]", level));
     }
   }
 
-  @Override
-  public int getTransactionIsolation() throws SQLException {
+  @Override public int getTransactionIsolation() throws SQLException {
     checkClosed();
-    return transactionIsolation;
+    return TRANSACTION_SERIALIZABLE;
   }
 
-  @Override
-  public SQLWarning getWarnings() throws SQLException {
+  @Override public SQLWarning getWarnings() throws SQLException {
     checkClosed();
-    return warnings;
+    return null;
   }
 
-  @Override
-  public void clearWarnings() throws SQLException {
+  @Override public void clearWarnings() throws SQLException {
     checkClosed();
-    warnings = null;
   }
 
-  @Override
-  public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
+  @Override public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
     checkClosed();
     validateResultSetParams(resultSetType, resultSetConcurrency);
-    return new L4Stmt(client, resultSetType, resultSetConcurrency);
+    return new L4St(client);
   }
 
-  @Override
-  public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency)
+  @Override public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency)
     throws SQLException {
     checkClosed();
     validateResultSetParams(resultSetType, resultSetConcurrency);
-    return new L4Ps(client, sql, resultSetType, resultSetConcurrency);
+    return new L4Ps(client, sql);
   }
 
-  @Override
-  public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency)
-    throws SQLException {
+  @Override public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
     checkClosed();
-    throw new SQLException("Callable statements not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Callable statements");
   }
 
-  @Override
-  public Map<String, Class<?>> getTypeMap() throws SQLException {
+  @Override public Map<String, Class<?>> getTypeMap() throws SQLException {
     checkClosed();
     return typeMap != null ? typeMap : new java.util.HashMap<>();
   }
 
-  @Override
-  public void setTypeMap(Map<String, Class<?>> map) throws SQLException {
+  @Override public void setTypeMap(Map<String, Class<?>> map) throws SQLException {
     checkClosed();
     this.typeMap = map;
   }
 
-  @Override
-  public void setHoldability(int holdability) throws SQLException {
+  @Override public void setHoldability(int holdability) throws SQLException {
     checkClosed();
     if (holdability != ResultSet.HOLD_CURSORS_OVER_COMMIT &&
       holdability != ResultSet.CLOSE_CURSORS_AT_COMMIT) {
-      throw new SQLException("Invalid holdability", SqlStateInvalidParam);
+      throw badParam(format("Invalid holdability: [%d]", holdability));
     }
     this.holdability = holdability;
   }
 
-  @Override
-  public int getHoldability() throws SQLException {
+  @Override public int getHoldability() throws SQLException {
     checkClosed();
     return holdability;
   }
 
-  @Override
-  public Savepoint setSavepoint() throws SQLException {
+  @Override public Savepoint setSavepoint() throws SQLException {
     checkClosed();
-    throw new SQLException("Savepoints not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Savepoints");
   }
 
-  @Override
-  public Savepoint setSavepoint(String name) throws SQLException {
+  @Override public Savepoint setSavepoint(String name) throws SQLException {
     checkClosed();
-    throw new SQLException("Savepoints not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Savepoints");
   }
 
-  @Override
-  public void rollback(Savepoint savepoint) throws SQLException {
+  @Override public void rollback(Savepoint savepoint) throws SQLException {
     checkClosed();
-    throw new SQLException("Savepoints not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Savepoints");
   }
 
-  @Override
-  public void releaseSavepoint(Savepoint savepoint) throws SQLException {
+  @Override public void releaseSavepoint(Savepoint savepoint) throws SQLException {
     checkClosed();
-    throw new SQLException("Savepoints not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Savepoints");
   }
 
-  @Override
-  public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability)
+  @Override public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability)
     throws SQLException {
     checkClosed();
     validateResultSetParams(resultSetType, resultSetConcurrency, resultSetHoldability);
-    return new L4Stmt(client, resultSetType, resultSetConcurrency, resultSetHoldability);
+    return new L4St(client);
   }
 
-  @Override
-  public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency,
-                                            int resultSetHoldability) throws SQLException {
+  @Override public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency,
+                                                      int resultSetHoldability) throws SQLException {
     checkClosed();
     validateResultSetParams(resultSetType, resultSetConcurrency, resultSetHoldability);
-    return new L4Ps(client, sql, resultSetType, resultSetConcurrency, resultSetHoldability);
+    return new L4Ps(client, sql);
   }
 
-  @Override
-  public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency,
+  @Override public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency,
                                        int resultSetHoldability) throws SQLException {
     checkClosed();
-    throw new SQLException("Callable statements not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Callable statements");
   }
 
   @Override public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) throws SQLException {
@@ -300,51 +246,43 @@ public class L4Conn implements Connection {
     return new L4Ps(client, sql);
   }
 
-  @Override
-  public PreparedStatement prepareStatement(String sql, int[] columnIndexes) throws SQLException {
+  @Override public PreparedStatement prepareStatement(String sql, int[] columnIndexes) throws SQLException {
     checkClosed();
-    throw new SQLException("Column index-based key retrieval not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Column index-based key retrieval");
   }
 
-  @Override
-  public PreparedStatement prepareStatement(String sql, String[] columnNames) throws SQLException {
+  @Override public PreparedStatement prepareStatement(String sql, String[] columnNames) throws SQLException {
     checkClosed();
-    throw new SQLException("Column name-based key retrieval not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Column name-based key retrieval");
   }
 
-  @Override
-  public Clob createClob() throws SQLException {
+  @Override public Clob createClob() throws SQLException {
     checkClosed();
     return new L4Clob();
   }
 
-  @Override
-  public Blob createBlob() throws SQLException {
+  @Override public Blob createBlob() throws SQLException {
     checkClosed();
     return new L4Blob();
   }
 
-  @Override
-  public NClob createNClob() throws SQLException {
+  @Override public NClob createNClob() throws SQLException {
     checkClosed();
     return new L4NClob();
   }
 
-  @Override
-  public SQLXML createSQLXML() throws SQLException {
+  @Override public SQLXML createSQLXML() throws SQLException {
     checkClosed();
-    throw new SQLException("SQLXML not supported", SqlStateFeatureNotSupported);
+    throw notSupported("SQLXML");
   }
 
-  @Override
-  public boolean isValid(int timeout) throws SQLException {
+  @Override public boolean isValid(int timeout) throws SQLException {
     if (timeout < 0) {
-      throw new SQLException("Timeout cannot be negative", SqlStateInvalidParam);
+      throw badParam("Timeout cannot be negative");
     }
     if (isClosed) {
       return false;
     }
-    // Check connection validity, e.g., by querying client status
     try {
       client.status();
       return true;
@@ -353,18 +291,16 @@ public class L4Conn implements Connection {
     }
   }
 
-  @Override
-  public void setClientInfo(String name, String value) throws SQLClientInfoException {
+  @Override public void setClientInfo(String name, String value) throws SQLClientInfoException {
     try {
       checkClosed();
       clientInfo.setProperty(name, value);
     } catch (SQLException e) {
-      throw new SQLClientInfoException(e.getMessage(), e.getSQLState(), e);
+      throw new SQLClientInfoException(e.getMessage(), e.getSQLState(), null, e);
     }
   }
 
-  @Override
-  public void setClientInfo(Properties properties) throws SQLClientInfoException {
+  @Override public void setClientInfo(Properties properties) throws SQLClientInfoException {
     try {
       checkClosed();
       clientInfo.clear();
@@ -372,32 +308,28 @@ public class L4Conn implements Connection {
         clientInfo.putAll(properties);
       }
     } catch (SQLException e) {
-      throw new SQLClientInfoException(e.getMessage(), e.getSQLState(), e);
+      throw new SQLClientInfoException(e.getMessage(), e.getSQLState(), null, e);
     }
   }
 
-  @Override
-  public String getClientInfo(String name) throws SQLException {
+  @Override public String getClientInfo(String name) throws SQLException {
     checkClosed();
     return clientInfo.getProperty(name);
   }
 
-  @Override
-  public Properties getClientInfo() throws SQLException {
+  @Override public Properties getClientInfo() throws SQLException {
     checkClosed();
     return clientInfo;
   }
 
-  @Override
-  public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
+  @Override public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
     checkClosed();
-    throw new SQLException("Arrays not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Arrays");
   }
 
-  @Override
-  public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
+  @Override public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
     checkClosed();
-    throw new SQLException("Structs not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Structs");
   }
 
   @Override

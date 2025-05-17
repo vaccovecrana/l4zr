@@ -329,7 +329,9 @@ public class L4Jdbc {
 
   public static NClob castNClob(String value, int columnIndex, int sourceJdbcType) throws SQLException {
     if (anyOf(sourceJdbcType, VARCHAR, NCLOB, NVARCHAR, CLOB)) {
-      return new L4NClob(value.toCharArray());
+      var clob = new L4NClob();
+      clob.setString(1, value);
+      return clob;
     }
     throw castError(value, columnIndex, sourceJdbcType, NCLOB);
   }

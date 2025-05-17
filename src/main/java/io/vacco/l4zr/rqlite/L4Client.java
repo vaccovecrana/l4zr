@@ -1,17 +1,17 @@
 package io.vacco.l4zr.rqlite;
 
+import java.io.Closeable;
 import java.net.URI;
 import java.net.http.*;
 import java.time.Duration;
 import java.util.*;
-import java.io.*;
 import io.vacco.l4zr.json.*;
 
 import static java.lang.String.format;
 
-public class L4Client {
+public class L4Client implements Closeable {
 
-  private final HttpClient httpClient;
+  private HttpClient httpClient;
   private final String baseUrl;
   private final String executeURL;
   private final String queryURL;
@@ -145,5 +145,9 @@ public class L4Client {
     return baseUrl;
   }
 
-}
+  @Override public void close() {
+    this.httpClient.close();
+    this.httpClient = null;
+  }
 
+}

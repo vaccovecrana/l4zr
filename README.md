@@ -62,3 +62,24 @@ Default: false.
 Reason: Strict freshness can cause requests to fail if the data isn’t fresh enough, so it’s better to leave it off by default.
 JDBC URL Example: jdbc:l4zr:http://localhost:4001/mydb?level=weak&freshness=1s&freshness_strict=true
 
+The rqlite JDBC driver does not support setAutoCommit, commit, or rollback, as rqlite executes all statements atomically using transaction=true. To perform transactions (atomic execution of multiple statements), use the batch methods addBatch and executeBatch in Statement or PreparedStatement.
+
+For example:java
+
+Statement stmt = conn.createStatement();
+stmt.addBatch("INSERT INTO foo(name) VALUES('fiona')");
+stmt.addBatch("INSERT INTO foo(name) VALUES('sinead')");
+int[] updateCounts = stmt.executeBatch(); // Executes atomically
+
+For prepared statements:
+
+PreparedStatement ps = conn.prepareStatement("INSERT INTO foo(name) VALUES(?)");
+ps.setString(1, "fiona");
+ps.addBatch();
+ps.setString(1, "sinead");
+ps.addBatch();
+int[] updateCounts = ps.executeBatch(); // Executes atomically
+
+The driver supports only TRANSACTION_SERIALIZABLE isolation, with linearizable read consistency by default, which is suitable for most production use cases, including transactions via batching. If you override the read consistency level (e.g., jdbc:rqlite://host:port/db?level=weak), you are responsible for handling any read inconsistencies that may occur in your transactions. For stricter consistency, set level=strong in the JDBC URL.
+
+The rqlite JDBC driver supports getTypeMap and setTypeMap for JDBC compliance, but these methods have no effect, as rqlite (based on SQLite) does not support user-defined SQL types (UDTs). Data is mapped to standard Java types (e.g., String, Integer, byte[]).

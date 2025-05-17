@@ -129,7 +129,6 @@ public class L4St implements Statement {
 
   @Override public void setEscapeProcessing(boolean enable) throws SQLException {
     checkClosed();
-    // TODO implement test case for SQL injection
   }
 
   @Override public int getQueryTimeout() throws SQLException {

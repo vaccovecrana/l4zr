@@ -101,9 +101,12 @@ public class L4PsTest {
         var nstringText = "NSTRING content";
         var blobData = "BLOB data".getBytes(StandardCharsets.UTF_8);
 
+        var clob = new L4NClob();
+        clob.setString(1, nclobText);
+
         ps.setAsciiStream(1, new ByteArrayInputStream(text.getBytes(StandardCharsets.US_ASCII)), text.length());
         ps.setClob(2, new javax.sql.rowset.serial.SerialClob(clobText.toCharArray()));
-        ps.setNClob(3, new L4NClob(nclobText.toCharArray()));
+        ps.setNClob(3, clob);
         ps.setNCharacterStream(4, new StringReader(nstringText), nstringText.length());
         ps.setBinaryStream(5, new ByteArrayInputStream(blobData), blobData.length);
 

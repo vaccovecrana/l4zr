@@ -7,6 +7,7 @@ import java.util.*;
 import static io.vacco.l4zr.jdbc.L4Block.*;
 import static io.vacco.l4zr.jdbc.L4Err.*;
 import static io.vacco.l4zr.jdbc.L4Db.*;
+import static io.vacco.l4zr.jdbc.L4Jdbc.loadResourceAsString;
 
 public class L4DbMeta implements DatabaseMetaData {
 
@@ -15,7 +16,7 @@ public class L4DbMeta implements DatabaseMetaData {
 
   public L4DbMeta(L4Client client, Connection connection) {
     this.client = Objects.requireNonNull(client);
-    this.connection = connection; // May be null
+    this.connection = connection;
   }
 
   public L4DbMeta(L4Client client) {
@@ -87,15 +88,17 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public String getDriverVersion() {
-    return "1.0"; // TODO Placeholder, update with actual driver version
+    return loadResourceAsString("/io/vacco/l4zr/version");
   }
 
   @Override public int getDriverMajorVersion() {
-    return 1; // TODO parse from jar version file
+    var ver = getDriverVersion();
+    return Integer.parseInt(ver.split("\\.")[0]);
   }
 
   @Override public int getDriverMinorVersion() {
-    return 0; // TODO parse from jar version file
+    var ver = getDriverVersion();
+    return Integer.parseInt(ver.split("\\.")[1]);
   }
 
   @Override public boolean usesLocalFiles() {
@@ -668,8 +671,7 @@ public class L4DbMeta implements DatabaseMetaData {
       "NULL AS CLASS_NAME, 0 AS DATA_TYPE, NULL AS REMARKS, 0 AS BASE_TYPE) WHERE 1=0");
   }
 
-  @Override
-  public Connection getConnection() throws SQLException {
+  @Override public Connection getConnection() throws SQLException {
     if (connection == null) {
       throw badQuery("No connection available");
     }

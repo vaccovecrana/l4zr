@@ -19,15 +19,15 @@ import static java.lang.String.format;
 
 public class L4Jdbc {
 
-  public static final int VARCHAR_STREAM    = Types.VARCHAR + 1000; // Custom type to distinguish stream
-  public static final int UNICODE_STREAM    = Types.VARCHAR + 1001; // Custom type for deprecated Unicode stream
-  public static final int BINARY_STREAM     = Types.BLOB + 1000;     // Custom type for binary stream
-  public static final int CHARACTER_STREAM  = Types.VARCHAR + 1002;
-  public static final int CLOB_STREAM       = Types.VARCHAR + 1003;
-  public static final int OBJECT_STREAM     = Types.OTHER + 1000;
-  public static final int URL_STREAM        = Types.DATALINK + 1000;
-  public static final int NCLOB_STREAM      = Types.NCLOB + 1000;
-  public static final int NCHARACTER_STREAM = Types.NVARCHAR + 1000;
+  public static final int VARCHAR_STREAM    = Types.VARCHAR   + 1000; // Custom type to distinguish stream
+  public static final int UNICODE_STREAM    = Types.VARCHAR   + 1001; // Custom type for deprecated Unicode stream
+  public static final int BINARY_STREAM     = Types.BLOB      + 1000; // Custom type for binary stream
+  public static final int CHARACTER_STREAM  = Types.VARCHAR   + 1002;
+  public static final int CLOB_STREAM       = Types.VARCHAR   + 1003;
+  public static final int OBJECT_STREAM     = Types.OTHER     + 1000;
+  public static final int URL_STREAM        = Types.DATALINK  + 1000;
+  public static final int NCLOB_STREAM      = Types.NCLOB     + 1000;
+  public static final int NCHARACTER_STREAM = Types.NVARCHAR  + 1000;
 
   // constants for rqlite types
   public static final String RQ_INTEGER   = "INTEGER";
@@ -57,6 +57,17 @@ public class L4Jdbc {
     RQ_DATALINK, RQ_CLOB, RQ_NCLOB, RQ_NVARCHAR,
     RQ_BLOB, RQ_NULL
   };
+
+  public static String loadResourceAsString(String resourcePath) {
+    try (var is = L4Jdbc.class.getResourceAsStream(resourcePath)) {
+      if (is == null) {
+        throw new IOException("Resource not found: " + resourcePath);
+      }
+      return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+    } catch (Exception e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
 
   public static boolean anyOf(int sourceType, int ... types) {
     for (var t : types) {

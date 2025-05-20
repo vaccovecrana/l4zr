@@ -128,9 +128,9 @@ public class L4DbMetaTest {
         assertEquals(4, meta.getJDBCMajorVersion());
         assertEquals(0, meta.getJDBCMinorVersion());
         assertEquals("l4zr/rqlite", meta.getDriverName());
-        assertEquals("1.0", meta.getDriverVersion());
-        assertEquals(1, meta.getDriverMajorVersion());
-        assertEquals(0, meta.getDriverMinorVersion());
+        assertTrue(meta.getDriverVersion().startsWith("8."));
+        assertEquals(8, meta.getDriverMajorVersion());
+        assertTrue(meta.getDriverMinorVersion() != -1);
         assertEquals(DatabaseMetaData.sqlStateSQL, meta.getSQLStateType());
       });
 

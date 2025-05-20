@@ -74,9 +74,10 @@ public class L4Client implements Closeable {
     }
   }
 
-  public void setBasicAuth(String username, String password) {
+  public L4Client withBasicAuth(String username, String password) {
     this.basicAuthUser = username;
     this.basicAuthPass = password;
+    return this;
   }
 
   public L4Response executeSingle(String statement, Object... args) {

@@ -55,10 +55,4 @@ public class L4Http {
       .build();
   }
 
-  public static HttpClient newMutualTLSClient(String clientCertPath, String clientKeyPath, String caCertPath) throws Exception {
-    // Loading client cert and key from separate PEM files is not straightforward in Java.
-    // Typically one uses a PKCS12 keystore. For now, we throw an exception.
-    throw new UnsupportedOperationException("Mutual TLS from separate PEM files is not implemented. Use a PKCS12 keystore instead.");
-  }
-
 }

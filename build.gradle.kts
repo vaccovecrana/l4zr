@@ -9,7 +9,11 @@ configure<io.vacco.oss.gitflow.GsPluginProfileExtension> {
   sharedLibrary(true, false)
 }
 
-val api by configurations
+dependencies {
+  testImplementation("io.vacco.metolithe:mt-codegen:2.40.0-MILESTONE-202505020407")
+  testImplementation("com.zaxxer:HikariCP:6.3.0")
+  testImplementation("io.vacco.shax:shax:2.0.16.0.4.3")
+}
 
 tasks.processResources {
   filesMatching("io/vacco/l4zr/version") {

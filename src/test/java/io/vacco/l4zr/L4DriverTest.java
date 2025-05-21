@@ -47,6 +47,7 @@ public class L4DriverTest {
         try (var jdbcConn = new JdbcConnection(ds.getConnection())) {
           var ra = new ClassLoaderResourceAccessor();
           var database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(jdbcConn);
+          database.setDefaultSchemaName("main");
           Scope.child(Scope.Attr.resourceAccessor, ra, () -> {
             var commandScope = new CommandScope("update");
             commandScope.addArgumentValue("changelogFile", "l4-schema.yml");

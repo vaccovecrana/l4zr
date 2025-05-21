@@ -63,7 +63,7 @@ public class L4Conn implements Connection {
 
   @Override public CallableStatement prepareCall(String sql) throws SQLException {
     checkClosed();
-    throw notSupported("Callable statements not supported");
+    throw notSupported("Callable statements");
   }
 
   @Override public String nativeSQL(String sql) throws SQLException {
@@ -73,10 +73,7 @@ public class L4Conn implements Connection {
 
   @Override public void setAutoCommit(boolean autoCommit) throws SQLException {
     checkClosed();
-    throw notSupported(join("", "",
-      "Auto-commit cannot be changed; rqlite executes all statements atomically.",
-      "Use Statement.addBatch() and executeBatch() for transactions."
-    ));
+    L4Options.transaction = autoCommit;
   }
 
   @Override public boolean getAutoCommit() throws SQLException {
@@ -84,12 +81,8 @@ public class L4Conn implements Connection {
     return L4Options.transaction;
   }
 
-  @Override public void commit() throws SQLException {
+  @Override public void commit() throws SQLException { // no-op enough?
     checkClosed();
-    throw notSupported(join("", "",
-      "Manual commit not supported; rqlite executes all statements atomically. ",
-      "Use Statement.addBatch() and executeBatch() for transactions."
-    ));
   }
 
   @Override public void rollback() throws SQLException {
@@ -355,7 +348,7 @@ public class L4Conn implements Connection {
 
   @Override public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
     checkClosed();
-    throw notSupported("Network timeout. Use global JDBC driver timeout option.");
+    L4Options.timeoutSec = milliseconds / 1000;
   }
 
   @Override public int getNetworkTimeout() throws SQLException {

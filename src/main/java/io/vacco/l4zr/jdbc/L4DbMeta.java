@@ -7,7 +7,7 @@ import java.util.*;
 import static io.vacco.l4zr.jdbc.L4Block.*;
 import static io.vacco.l4zr.jdbc.L4Err.*;
 import static io.vacco.l4zr.jdbc.L4Db.*;
-import static io.vacco.l4zr.jdbc.L4Jdbc.loadResourceAsString;
+import static io.vacco.l4zr.jdbc.L4Jdbc.*;
 
 public class L4DbMeta implements DatabaseMetaData {
 
@@ -88,17 +88,15 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public String getDriverVersion() {
-    return loadResourceAsString("/io/vacco/l4zr/version");
+    return driverVersion();
   }
 
   @Override public int getDriverMajorVersion() {
-    var ver = getDriverVersion();
-    return Integer.parseInt(ver.split("\\.")[0]);
+    return driverVersionMajor();
   }
 
   @Override public int getDriverMinorVersion() {
-    var ver = getDriverVersion();
-    return Integer.parseInt(ver.split("\\.")[1]);
+    return driverVersionMinor();
   }
 
   @Override public boolean usesLocalFiles() {

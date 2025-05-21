@@ -17,9 +17,6 @@ public class L4Conn implements Connection {
   private boolean isClosed;
   private int holdability;
 
-  private String schema;
-  private Map<String, Class<?>> typeMap;
-
   public L4Conn(L4Client client) throws SQLException {
     if (client == null) {
       throw new SQLException("L4Client cannot be null", SqlStateInvalidParam);
@@ -28,8 +25,6 @@ public class L4Conn implements Connection {
     this.isClosed = false;
     this.clientInfo = new Properties();
     this.holdability = ResultSet.HOLD_CURSORS_OVER_COMMIT;
-    this.typeMap = null;
-    this.schema = null;
     this.meta = new L4DbMeta(client);
   }
 
@@ -179,12 +174,12 @@ public class L4Conn implements Connection {
 
   @Override public Map<String, Class<?>> getTypeMap() throws SQLException {
     checkClosed();
-    return typeMap != null ? typeMap : new java.util.HashMap<>();
+    throw notSupported("Type mapping");
   }
 
   @Override public void setTypeMap(Map<String, Class<?>> map) throws SQLException {
     checkClosed();
-    this.typeMap = map;
+    throw notSupported("Type mapping");
   }
 
   @Override public void setHoldability(int holdability) throws SQLException {
@@ -332,28 +327,23 @@ public class L4Conn implements Connection {
     throw notSupported("Structs");
   }
 
-  @Override
-  public void setSchema(String schema) throws SQLException {
+  @Override public void setSchema(String schema) throws SQLException {
     checkClosed();
-    // rqlite may not support schemas; store or validate if applicable
-    this.schema = schema;
+    throw notSupported("Schemas");
   }
 
-  @Override
-  public String getSchema() throws SQLException {
+  @Override public String getSchema() throws SQLException {
     checkClosed();
-    return schema;
+    throw notSupported("Schemas");
   }
 
-  @Override
-  public void abort(Executor executor) throws SQLException {
+  @Override public void abort(Executor executor) throws SQLException {
     if (isClosed) {
       return;
     }
     if (executor == null) {
-      throw new SQLException("Executor cannot be null", SqlStateInvalidParam);
+      throw badParam("Executor cannot be null");
     }
-    // Execute cleanup in the provided executor
     executor.execute(() -> {
       try {
         close();
@@ -363,34 +353,25 @@ public class L4Conn implements Connection {
     });
   }
 
-  @Override
-  public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+  @Override public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
     checkClosed();
-    if (milliseconds < 0) {
-      throw new SQLException("Timeout cannot be negative", SqlStateInvalidParam);
-    }
-    // Configure network timeout on L4Client if supported
-    throw new SQLException("Network timeout not supported", SqlStateFeatureNotSupported);
+    throw notSupported("Network timeout. Use global JDBC driver timeout option.");
   }
 
-  @Override
-  public int getNetworkTimeout() throws SQLException {
+  @Override public int getNetworkTimeout() throws SQLException {
     checkClosed();
-    // Return default or configured timeout
-    return 0;
+    return (int) L4Options.timeoutSec * 1000;
   }
 
-  @Override
-  public <T> T unwrap(Class<T> iface) throws SQLException {
+  @Override public <T> T unwrap(Class<T> iface) throws SQLException {
     checkClosed();
     if (iface.isAssignableFrom(getClass())) {
       return iface.cast(this);
     }
-    throw new SQLException("Cannot unwrap to " + iface.getName());
+    throw badState(format("Cannot unwrap to %s", iface.getName()));
   }
 
-  @Override
-  public boolean isWrapperFor(Class<?> iface) throws SQLException {
+  @Override public boolean isWrapperFor(Class<?> iface) throws SQLException {
     checkClosed();
     return iface.isAssignableFrom(getClass());
   }

@@ -222,6 +222,10 @@ public class L4Err {
     return new SQLException(msg, SqlStateInvalidTransaction);
   }
 
+  public static SQLException badState(String msg, Exception e) {
+    return new SQLException(msg, e);
+  }
+
   public static SQLException rsClosed() {
     return new SQLException("ResultSet is closed", SqlStateGeneralError);
   }

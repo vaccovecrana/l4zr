@@ -2,13 +2,14 @@ package io.vacco.l4zr;
 
 import io.vacco.l4zr.rqlite.L4Client;
 import io.vacco.l4zr.rqlite.L4Http;
+import io.vacco.l4zr.rqlite.L4Options;
 
 import static org.junit.Assert.assertEquals;
 
 public class L4Tests {
 
   public static L4Client localClient() {
-    return new L4Client("http://localhost:4001", L4Http.defaultHttpClient());
+    return new L4Client("http://localhost:4001", L4Http.defaultHttpClient(L4Options.timeoutSec).build());
   }
 
   public static void setupPreparedStatementTestTable(L4Client rq) {

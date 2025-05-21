@@ -69,6 +69,20 @@ public class L4Jdbc {
     }
   }
 
+  public static String driverVersion() {
+    return loadResourceAsString("/io/vacco/l4zr/version");
+  }
+
+  public static int driverVersionMajor() {
+    var ver = driverVersion();
+    return Integer.parseInt(ver.split("\\.")[0]);
+  }
+
+  public static int driverVersionMinor() {
+    var ver = driverVersion();
+    return Integer.parseInt(ver.split("\\.")[1]);
+  }
+
   public static boolean anyOf(int sourceType, int ... types) {
     for (var t : types) {
       if (sourceType == t) {

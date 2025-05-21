@@ -7,16 +7,14 @@ import java.security.*;
 import java.security.cert.*;
 import java.time.Duration;
 
-/* A set of helper methods to create HttpClient instances with various TLS settings. */
 public class L4Http {
 
-  public static HttpClient defaultHttpClient() {
+  public static HttpClient.Builder defaultHttpClient(long timeoutSec) {
     return HttpClient.newBuilder()
-      .connectTimeout(Duration.ofSeconds(5))
-      .build();
+      .connectTimeout(Duration.ofSeconds(timeoutSec));
   }
 
-  public static HttpClient newTLSSClientInsecure() throws Exception {
+  public static HttpClient.Builder newTLSSClientInsecure(long timeoutSec) throws Exception {
     var sslContext = SSLContext.getInstance("TLS");
     var trustAll = new TrustManager[]{
       new X509TrustManager() {
@@ -30,11 +28,10 @@ public class L4Http {
     sslContext.init(null, trustAll, new SecureRandom());
     return HttpClient.newBuilder()
       .sslContext(sslContext)
-      .connectTimeout(Duration.ofSeconds(5))
-      .build();
+      .connectTimeout(Duration.ofSeconds(timeoutSec));
   }
 
-  public static HttpClient newTLSSClient(String caCertPath) throws Exception {
+  public static HttpClient.Builder newTLSSClient(String caCertPath, long timeoutSec) throws Exception {
     var cf = CertificateFactory.getInstance("X.509");
     var caBytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(caCertPath));
     var bis = new ByteArrayInputStream(caBytes);
@@ -51,8 +48,7 @@ public class L4Http {
     sslContext.init(null, tmf.getTrustManagers(), new SecureRandom());
     return HttpClient.newBuilder()
       .sslContext(sslContext)
-      .connectTimeout(Duration.ofSeconds(5))
-      .build();
+      .connectTimeout(Duration.ofSeconds(timeoutSec));
   }
 
 }

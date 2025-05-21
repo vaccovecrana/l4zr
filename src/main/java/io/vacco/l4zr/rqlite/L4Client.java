@@ -29,7 +29,9 @@ public class L4Client implements Closeable {
     this.statusURL = baseURL + "/status";
     this.nodesURL = baseURL + "/nodes";
     this.readyURL = baseURL + "/readyz";
-    this.httpClient = (client != null) ? client : L4Http.defaultHttpClient();
+    this.httpClient = (client != null)
+      ? client
+      : L4Http.defaultHttpClient(L4Options.timeoutSec).build();
   }
 
   private HttpResponse<String> doPostRequest(String url, String body) {
@@ -130,12 +132,11 @@ public class L4Client implements Closeable {
     return resp.body();
   }
 
-  public L4Client withTxTimeoutSec(long txTimeoutSec) {
+  public void withTxTimeoutSec(long txTimeoutSec) {
     if (txTimeoutSec < 0) {
       throw new IllegalArgumentException(format("Invalid timeout [%d]", txTimeoutSec));
     }
     L4Options.timeoutSec = txTimeoutSec == 0 ? -1 : txTimeoutSec;
-    return this;
   }
 
   public long getTxTimeoutSec() {

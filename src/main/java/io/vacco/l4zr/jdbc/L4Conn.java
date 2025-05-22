@@ -85,9 +85,8 @@ public class L4Conn implements Connection {
     checkClosed();
   }
 
-  @Override public void rollback() throws SQLException {
+  @Override public void rollback() throws SQLException { // no-op enough?
     checkClosed();
-    throw notSupported("Rollback not supported");
   }
 
   @Override public void close() throws SQLException {

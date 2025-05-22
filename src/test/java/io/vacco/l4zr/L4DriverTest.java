@@ -1,7 +1,6 @@
 package io.vacco.l4zr;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
+import io.vacco.l4zr.jdbc.L4Log;
 import io.vacco.l4zr.schema.*;
 import io.vacco.metolithe.codegen.dao.MtDaoMapper;
 import io.vacco.metolithe.codegen.liquibase.*;
@@ -15,7 +14,9 @@ import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.junit.runner.RunWith;
+import org.slf4j.LoggerFactory;
 import java.io.*;
+import java.sql.DriverManager;
 
 import static j8spec.J8Spec.*;
 
@@ -29,6 +30,7 @@ public class L4DriverTest {
 
   static {
     ShOption.setSysProp(ShOption.IO_VACCO_SHAX_DEVMODE, "true");
+    ShOption.setSysProp(ShOption.IO_VACCO_SHAX_LOGLEVEL, "trace");
 
     it("Generates schema classes", () -> {
       var root = new MtLb().build(MtCaseFormat.KEEP_CASE, schema);
@@ -41,10 +43,10 @@ public class L4DriverTest {
       new MtDaoMapper().mapSchema(daoDir, pkg, MtCaseFormat.KEEP_CASE, schema);
     });
     it("Applies Liquibase changesets",  () -> {
-      var hkConfig = new HikariConfig();
-      hkConfig.setJdbcUrl("jdbc:rqlite:http://localhost:4001");
-      try (var ds = new HikariDataSource(hkConfig)) {
-        try (var jdbcConn = new JdbcConnection(ds.getConnection())) {
+      var log = LoggerFactory.getLogger(L4DriverTest.class);
+      L4Log.traceFn = log::trace;
+      try (var conn = DriverManager.getConnection("jdbc:sqlite:http://localhost:4001")) {
+        try (var jdbcConn = new JdbcConnection(conn)) {
           var ra = new ClassLoaderResourceAccessor();
           var database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(jdbcConn);
           database.setDefaultSchemaName("main");

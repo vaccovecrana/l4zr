@@ -87,9 +87,7 @@ public class L4Db {
   }
 
   /* SQLite does not support schemas or catalogs, treat catalog as database name */
-  public static L4Result dbGetTables(String catalog, String schemaPattern,
-                                     String tableNamePattern, String[] types,
-                                     L4Client client) {
+  public static L4Result dbGetTables(String tableNamePattern, String[] types, L4Client client) {
     var typeSet = types == null ? new HashSet<>(Arrays.asList(TABLE, VIEW)) : new HashSet<>(Arrays.asList(types));
     var typeFilter = "";
     if (!typeSet.contains(TABLE) && typeSet.contains(VIEW)) {
@@ -116,14 +114,6 @@ public class L4Db {
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR
     );
-    if (catalog != null && !catalog.isEmpty()) {
-      res.values = res.values.stream()
-        .filter(row -> matchesPattern(catalog, res.get(TABLE_CAT, row)))
-        .collect(toList());
-    }
-    if (schemaPattern != null && !schemaPattern.isEmpty()) {
-      res.values.clear();
-    }
     return res;
   }
 
@@ -147,9 +137,7 @@ public class L4Db {
     return out.addRow(TABLE).addRow(VIEW);
   }
 
-  public static L4Result dbGetColumns(String catalog, String schemaPattern,
-                                      String tableNamePattern, String columnNamePattern,
-                                      L4Client client) {
+  public static L4Result dbGetColumns(String tableNamePattern, String columnNamePattern, L4Client client) {
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, NULL AS TABLE_NAME, ",
@@ -169,12 +157,8 @@ public class L4Db {
       RQ_VARCHAR, RQ_INTEGER, RQ_VARCHAR, RQ_VARCHAR
     );
 
-    if (schemaPattern != null && !schemaPattern.isEmpty()) { // SQLite does not support schemas
-      return out;
-    }
-
     // Get all tables matching tableNamePattern
-    var tables = dbGetTables(catalog, schemaPattern, tableNamePattern, new String[] {TABLE, VIEW}, client);
+    var tables = dbGetTables(tableNamePattern, new String[] {TABLE, VIEW}, client);
 
     tables.forEach((i, row) -> {
       var tableName = out.get(TABLE_NAME, row);
@@ -228,7 +212,7 @@ public class L4Db {
     return out;
   }
 
-  public static L4Result dbGetPrimaryKeys(String catalog, String schema, String table, L4Client client) {
+  public static L4Result dbGetPrimaryKeys(String table, L4Client client) {
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, ",
@@ -238,9 +222,6 @@ public class L4Db {
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
       RQ_VARCHAR, RQ_INTEGER, RQ_VARCHAR
     );
-    if (schema != null && !schema.isEmpty()) { // SQLite does not support schemas
-      return out;
-    }
     var tab = quote(table);
     var res = client.querySingle(format("PRAGMA table_info('%s')", tab)).first();
     final var keySeq = new int[] { 1 };
@@ -248,7 +229,7 @@ public class L4Db {
       var pk = res.get(kPk, row);
       if (pk != null && !pk.equals(i0)) {
         out.addRow(
-          catalog, null, tab, res.get(kName, row),
+          null, null, tab, res.get(kName, row),
           itoa(keySeq[0]++), // TODO double check this.
           format("PK_%s", tab.toUpperCase())
         );
@@ -257,8 +238,7 @@ public class L4Db {
     return out;
   }
 
-  public static L4Result dbGetBestRowIdentifier(String catalog, String schema, String table,
-                                                boolean nullable, L4Client client) {
+  public static L4Result dbGetBestRowIdentifier(String table, boolean nullable, L4Client client) {
     // Use primary key columns as best row identifier
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
@@ -271,10 +251,10 @@ public class L4Db {
       RQ_VARCHAR, RQ_INTEGER, RQ_INTEGER,
       RQ_INTEGER, RQ_INTEGER
     );
-    var pkRs = dbGetPrimaryKeys(catalog, schema, table, client);
+    var pkRs = dbGetPrimaryKeys(table, client);
     pkRs.forEach((i, pkr) -> {
       var colName = pkRs.get(COLUMN_NAME, pkr);
-      var colRs = dbGetColumns(catalog, schema, table, colName, client);
+      var colRs = dbGetColumns(table, colName, client);
       colRs.forEach((j, cr) -> {
         var nFlag = colRs.get(NULLABLE, cr);
         var nfi = nFlag != null ? Integer.parseInt(nFlag) : -1;
@@ -292,7 +272,7 @@ public class L4Db {
     return out;
   }
 
-  public static L4Result dbGetImportedKeys(String catalog, String table, L4Client client) {
+  public static L4Result dbGetImportedKeys(String table, L4Client client) {
     // SQLite does not support schemas
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
@@ -315,9 +295,9 @@ public class L4Db {
       var to = rs.get(kTo, row);
       var onDelete = rs.get(kOnDelete, row);
       out.addRow(
-        catalog, null,
+        null, null,
         rs.get(kTable, row), to,
-        catalog, null, tab,
+        null, null, tab,
         from, seq,
         itoa(DatabaseMetaData.importedKeyNoAction), // UPDATE_RULE (SQLite does not support ON UPDATE)
         itoa(
@@ -333,7 +313,7 @@ public class L4Db {
     return out;
   }
 
-  public static L4Result dbGetExportedKeys(String catalog, String table, L4Client client) {
+  public static L4Result dbGetExportedKeys(String table, L4Client client) {
     // SQLite does not support schemas
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
@@ -350,7 +330,7 @@ public class L4Db {
       RQ_VARCHAR, RQ_SMALLINT
     );
     // Find all tables with foreign keys referencing this table
-    var tables = dbGetTables(catalog,null, null, new String[] { TABLE }, client);
+    var tables = dbGetTables(null, new String[] { TABLE }, client);
     tables.forEach((i, row) -> {
       var fkTable = quote(tables.get(TABLE_NAME, row));
       var fkRs = client.querySingle(format("PRAGMA foreign_key_list('%s')", fkTable)).first();
@@ -361,8 +341,8 @@ public class L4Db {
           var to = fkRs.get(kTo, row0);
           var onDelete = fkRs.get(kOnDelete, row0);
           out.addRow(
-            catalog, null, table,
-            to, catalog, null, fkTable, from,
+            null, null, table,
+            to, null, null, fkTable, from,
             seq, itoa(DatabaseMetaData.importedKeyNoAction),
             itoa(
               onDelete != null && onDelete.equals(CASCADE)
@@ -379,9 +359,7 @@ public class L4Db {
     return out;
   }
 
-  public static L4Result dbGetCrossReference(String parentCatalog, String parentTable,
-                                             String foreignCatalog, String foreignTable,
-                                             L4Client client) {
+  public static L4Result dbGetCrossReference(String parentTable, String foreignTable, L4Client client) {
     // SQLite does not support schemas
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
@@ -398,13 +376,12 @@ public class L4Db {
       RQ_SMALLINT, RQ_SMALLINT, RQ_SMALLINT,
       RQ_VARCHAR, RQ_VARCHAR, RQ_SMALLINT
     );
-    var fkRs = dbGetImportedKeys(foreignCatalog, foreignTable, client);
+    var fkRs = dbGetImportedKeys(foreignTable, client);
     fkRs.forEach((i, row) -> {
       var pkTable = fkRs.get(PKTABLE_NAME, row);
-      var pkTableCat = fkRs.get(PKTABLE_CAT, row);
-      if (parentTable.equals(pkTable) && (parentCatalog == null || parentCatalog.equals(pkTableCat))) {
+      if (parentTable.equals(pkTable)) {
         out.addRow(
-          pkTableCat, fkRs.get(PKTABLE_SCHEM, row), pkTable,
+          null, fkRs.get(PKTABLE_SCHEM, row), pkTable,
           fkRs.get(PKCOLUMN_NAME, row), fkRs.get(FKTABLE_CAT, row),
           fkRs.get(FKTABLE_SCHEM, row), fkRs.get(FKTABLE_NAME, row),
           fkRs.get(FKCOLUMN_NAME, row), fkRs.get(KEY_SEQ, row),

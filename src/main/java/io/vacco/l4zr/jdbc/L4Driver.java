@@ -15,7 +15,7 @@ import static java.lang.String.format;
 
 public class L4Driver implements Driver {
 
-  private static final String JDBC_URL_PREFIX = "jdbc:rqlite:";
+  private static final String JDBC_URL_PREFIX = "jdbc:sqlite:";
   private static final Logger log = Logger.getLogger(L4Driver.class.getName());
 
   static {

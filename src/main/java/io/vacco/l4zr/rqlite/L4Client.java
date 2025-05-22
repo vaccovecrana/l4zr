@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.http.*;
 import java.time.Duration;
 import java.util.*;
+import io.vacco.l4zr.jdbc.L4Log;
 import io.vacco.l4zr.json.*;
 
 import static java.lang.String.format;
@@ -36,6 +37,7 @@ public class L4Client implements Closeable {
 
   private HttpResponse<String> doPostRequest(String url, String body) {
     try {
+      L4Log.l4Trace("POST {}", body);
       var builder = HttpRequest.newBuilder().uri(URI.create(url));
       if (L4Options.timeoutSec > 0) {
         builder.timeout(Duration.ofSeconds(L4Options.timeoutSec));

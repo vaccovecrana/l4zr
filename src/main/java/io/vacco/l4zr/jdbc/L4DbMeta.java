@@ -71,7 +71,7 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public String getDatabaseProductName() {
-    return "Rqlite (SQLite)";
+    return "SQLite";
   }
 
   @Override public String getDatabaseProductVersion() throws SQLException {
@@ -538,7 +538,7 @@ public class L4DbMeta implements DatabaseMetaData {
 
   @Override public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException {
     return sqlRun(() -> new L4Rs(
-      dbGetTables(catalog, schemaPattern, tableNamePattern, types, client), null)
+      dbGetTables(tableNamePattern, types, client), null)
     );
   }
 
@@ -559,7 +559,7 @@ public class L4DbMeta implements DatabaseMetaData {
 
   @Override public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
     return sqlRun(() -> new L4Rs(
-      dbGetColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern, client),
+      dbGetColumns(tableNamePattern, columnNamePattern, client),
       null
     ));
   }
@@ -577,7 +577,7 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable) throws SQLException {
-    return sqlRun(() -> new L4Rs(dbGetBestRowIdentifier(catalog, schema, table, nullable, client), null));
+    return sqlRun(() -> new L4Rs(dbGetBestRowIdentifier(table, nullable, client), null));
   }
 
   @Override public ResultSet getVersionColumns(String catalog, String schema, String table) throws SQLException {
@@ -588,20 +588,20 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
-    return sqlRun(() -> new L4Rs(dbGetPrimaryKeys(catalog, schema, table, client), null));
+    return sqlRun(() -> new L4Rs(dbGetPrimaryKeys(table, client), null));
   }
 
   @Override public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
-    return sqlRun(() -> new L4Rs(dbGetImportedKeys(catalog, table, client), null));
+    return sqlRun(() -> new L4Rs(dbGetImportedKeys(table, client), null));
   }
 
   @Override public ResultSet getExportedKeys(String catalog, String schema, String table) throws SQLException {
-    return sqlRun(() -> new L4Rs(dbGetExportedKeys(catalog, table, client), null));
+    return sqlRun(() -> new L4Rs(dbGetExportedKeys(table, client), null));
   }
 
   @Override public ResultSet getCrossReference(String parentCatalog, String parentSchema, String parentTable,
                                                String foreignCatalog, String foreignSchema, String foreignTable) throws SQLException {
-    return sqlRun(() -> new L4Rs(dbGetCrossReference(parentCatalog, parentTable, foreignCatalog, foreignTable, client), null));
+    return sqlRun(() -> new L4Rs(dbGetCrossReference(parentTable, foreignTable, client), null));
   }
 
   @Override public ResultSet getTypeInfo() throws SQLException {

@@ -123,7 +123,7 @@ public class L4DbMetaTest {
 
       // Database Identification
       it("Tests database identification methods", () -> {
-        assertEquals("Rqlite (SQLite)", meta.getDatabaseProductName());
+        assertEquals("SQLite", meta.getDatabaseProductName());
         assertTrue(meta.getDatabaseProductVersion().matches("\\d+\\.\\d+\\.\\d+"));
         assertEquals(4, meta.getJDBCMajorVersion());
         assertEquals(0, meta.getJDBCMinorVersion());
@@ -321,7 +321,7 @@ public class L4DbMetaTest {
       it("Tests catalog metadata", () -> {
         var rs = meta.getCatalogs();
         var rows = readResultSet(rs);
-        assertTrue(rows.size() >= 1); // At least 'main' database
+        assertFalse(rows.isEmpty()); // At least 'main' database
         var foundMain = false;
         for (var row : rows) {
           if ("main".equals(row.get("TABLE_CAT"))) {
@@ -410,7 +410,7 @@ public class L4DbMetaTest {
 
       // Metadata Queries: Privileges
       it("Tests privilege metadata", () -> {
-        ResultSet rs = meta.getTablePrivileges(null, null, null);
+        var rs = meta.getTablePrivileges(null, null, null);
         assertFalse(rs.next()); // SQLite does not support privileges
         rs.close();
         rs = meta.getColumnPrivileges(null, null, "metadata_table", null);
@@ -421,7 +421,7 @@ public class L4DbMetaTest {
       // Metadata Queries: Keys and Indexes
       it("Tests key and index metadata", () -> {
         // getPrimaryKeys
-        ResultSet rs = meta.getPrimaryKeys(null, null, "metadata_table");
+        var rs = meta.getPrimaryKeys(null, null, "metadata_table");
         var rows = readResultSet(rs);
         assertEquals(1, rows.size());
         var pk = rows.get(0);
@@ -469,7 +469,7 @@ public class L4DbMetaTest {
         rs = meta.getExportedKeys(null, null, "metadata_table");
         rows = readResultSet(rs);
         assertEquals(1, rows.size());
-        Map<String, Object> ek = rows.get(0);
+        var ek = rows.get(0);
         assertNull(ek.get("PKTABLE_CAT"));
         assertNull(ek.get("PKTABLE_SCHEM"));
         assertEquals("metadata_table", ek.get("PKTABLE_NAME"));
@@ -483,7 +483,7 @@ public class L4DbMetaTest {
         rs = meta.getCrossReference(null, null, "metadata_table", null, null, "related_table");
         rows = readResultSet(rs);
         assertEquals(1, rows.size());
-        Map<String, Object> cr = rows.get(0);
+        var cr = rows.get(0);
         assertNull(cr.get("PKTABLE_CAT"));
         assertEquals("metadata_table", cr.get("PKTABLE_NAME"));
         assertEquals("id", cr.get("PKCOLUMN_NAME"));
@@ -544,7 +544,7 @@ public class L4DbMetaTest {
       // Metadata Queries: UDTs and Others
       it("Tests UDT and other metadata", () -> {
         // getUDTs
-        ResultSet rs = meta.getUDTs(null, null, null, null);
+        var rs = meta.getUDTs(null, null, null, null);
         assertFalse(rs.next());
         rs.close();
         // getSuperTypes
@@ -571,7 +571,7 @@ public class L4DbMetaTest {
 
       // Metadata Queries: Client Info
       it("Tests client info properties", () -> {
-        ResultSet rs = meta.getClientInfoProperties();
+        var rs = meta.getClientInfoProperties();
         assertFalse(rs.next()); // No client info properties
         rs.close();
       });
@@ -601,7 +601,7 @@ public class L4DbMetaTest {
         // Invalid table name
         try {
           meta.getColumns(null, null, "non_existent_table", null);
-          ResultSet rs = meta.getColumns(null, null, "non_existent_table", null);
+          var rs = meta.getColumns(null, null, "non_existent_table", null);
           var rows = readResultSet(rs);
           assertEquals(0, rows.size());
         } catch (SQLException e) {
@@ -609,14 +609,9 @@ public class L4DbMetaTest {
         }
 
         // Invalid column name
-        ResultSet rs = meta.getColumns(null, null, "metadata_table", "invalid_column");
+        var rs = meta.getColumns(null, null, "metadata_table", "invalid_column");
         assertFalse(rs.next());
         rs.close();
-
-        // Invalid catalog
-        rs = meta.getTables("non_existent_db", null, null, null);
-        var rows = readResultSet(rs);
-        assertEquals(0, rows.size());
       });
     }
   }

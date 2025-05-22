@@ -403,8 +403,12 @@ public class L4Jdbc {
                                     int columnIndex, int scale, Calendar cal, Class<?> type) throws SQLException {
     try {
       switch (targetJdbcType) {
+        case CHAR:
+        case CLOB:
+        case DATALINK:
         case VARCHAR:
-        case CHAR:              return value;
+        case NCLOB:
+        case NVARCHAR:          return value;
         case BOOLEAN:           return castBoolean(value, columnIndex, sourceJdbcType);
         case INTEGER:           return castInteger(value, columnIndex, sourceJdbcType);
         case BIGINT:            return castLong(value, columnIndex, sourceJdbcType);
@@ -413,6 +417,7 @@ public class L4Jdbc {
         case BLOB:              return castBlob(value, columnIndex, sourceJdbcType);
         case TINYINT:           return castByte(value, columnIndex, sourceJdbcType);
         case SMALLINT:          return castShort(value, columnIndex, sourceJdbcType);
+        case NUMERIC: // TODO needs scale metadata
         case DECIMAL:           return castBigDecimal(value, columnIndex, sourceJdbcType, scale);
         case DATE:              return castDate(value, columnIndex, sourceJdbcType, cal);
         case TIME:              return castTime(value, columnIndex, sourceJdbcType, cal);

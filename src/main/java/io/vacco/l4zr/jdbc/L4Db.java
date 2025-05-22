@@ -8,7 +8,6 @@ import java.util.regex.Pattern;
 
 import static io.vacco.l4zr.jdbc.L4Jdbc.*;
 import static java.lang.String.*;
-import static java.util.stream.Collectors.toList;
 
 public class L4Db {
 
@@ -86,7 +85,6 @@ public class L4Db {
     return Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(value).matches();
   }
 
-  /* SQLite does not support schemas or catalogs, treat catalog as database name */
   public static L4Result dbGetTables(String tableNamePattern, String[] types, L4Client client) {
     var typeSet = types == null ? new HashSet<>(Arrays.asList(TABLE, VIEW)) : new HashSet<>(Arrays.asList(types));
     var typeFilter = "";
@@ -273,7 +271,6 @@ public class L4Db {
   }
 
   public static L4Result dbGetImportedKeys(String table, L4Client client) {
-    // SQLite does not support schemas
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS PKTABLE_CAT, NULL AS PKTABLE_SCHEM, NULL AS PKTABLE_NAME, ",
@@ -314,7 +311,6 @@ public class L4Db {
   }
 
   public static L4Result dbGetExportedKeys(String table, L4Client client) {
-    // SQLite does not support schemas
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS PKTABLE_CAT, NULL AS PKTABLE_SCHEM, NULL AS PKTABLE_NAME, ",
@@ -360,7 +356,6 @@ public class L4Db {
   }
 
   public static L4Result dbGetCrossReference(String parentTable, String foreignTable, L4Client client) {
-    // SQLite does not support schemas
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS PKTABLE_CAT, NULL AS PKTABLE_SCHEM, NULL AS PKTABLE_NAME, ",
@@ -395,7 +390,6 @@ public class L4Db {
   }
 
   public static L4Result dbGetTypeInfo(L4Client client) {
-    // Common SQLite types
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS TYPE_NAME, 0 AS DATA_TYPE, 0 AS PRECISION, ",
@@ -433,7 +427,6 @@ public class L4Db {
 
   public static L4Result dbGetIndexInfo(String catalog, String table,
                                         boolean unique, L4Client client) {
-    // SQLite does not support schemas
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, NULL AS TABLE_NAME, ",

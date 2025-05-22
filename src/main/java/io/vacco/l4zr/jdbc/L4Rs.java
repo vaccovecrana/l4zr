@@ -78,6 +78,7 @@ public class L4Rs implements ResultSet {
       return null;
     }
     int sourceJdbcType = meta.getColumnType(columnIndex);
+    // TODO for numeric/decimal types, we need some way to retrieve the scale value.
     return convertValue(value, sourceJdbcType, targetJdbcType, columnIndex, scale, cal, type);
   }
 
@@ -526,7 +527,7 @@ public class L4Rs implements ResultSet {
   }
 
   @Override public URL getURL(int columnIndex) throws SQLException {
-    return (URL) tryCast(columnIndex, URL_STREAM, 0, null, null);
+    return (URL) tryCast(columnIndex, URL_STREAM);
   }
 
   @Override public URL getURL(String columnLabel) throws SQLException {
@@ -574,7 +575,7 @@ public class L4Rs implements ResultSet {
   @Override public void updateNClob(String columnLabel, NClob nClob) throws SQLException { noUpdateImpl(); }
 
   @Override public NClob getNClob(int columnIndex) throws SQLException {
-    return (NClob) tryCast(columnIndex, NCLOB_STREAM, 0, null, null);
+    return (NClob) tryCast(columnIndex, NCLOB_STREAM);
   }
 
   @Override public NClob getNClob(String columnLabel) throws SQLException {
@@ -593,7 +594,7 @@ public class L4Rs implements ResultSet {
   @Override public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException { noUpdateImpl(); }
 
   @Override public String getNString(int columnIndex) throws SQLException {
-    return (String) tryCast(columnIndex, Types.VARCHAR, 0, null, null);
+    return (String) tryCast(columnIndex, Types.VARCHAR);
   }
 
   @Override public String getNString(String columnLabel) throws SQLException {
@@ -601,7 +602,7 @@ public class L4Rs implements ResultSet {
   }
 
   @Override public Reader getNCharacterStream(int columnIndex) throws SQLException {
-    return (Reader) tryCast(columnIndex, NCHARACTER_STREAM, 0, null, null);
+    return (Reader) tryCast(columnIndex, NCHARACTER_STREAM);
   }
 
   @Override public Reader getNCharacterStream(String columnLabel) throws SQLException {

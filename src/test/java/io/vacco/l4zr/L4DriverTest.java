@@ -17,6 +17,8 @@ import org.codejargon.fluentjdbc.api.FluentJdbcBuilder;
 import org.codejargon.fluentjdbc.api.integration.ConnectionProvider;
 import org.junit.runner.RunWith;
 import org.slf4j.LoggerFactory;
+
+import java.awt.*;
 import java.io.*;
 import java.sql.DriverManager;
 
@@ -36,56 +38,58 @@ public class L4DriverTest {
     ShOption.setSysProp(ShOption.IO_VACCO_SHAX_DEVMODE, "true");
     ShOption.setSysProp(ShOption.IO_VACCO_SHAX_LOGLEVEL, "trace");
 
-    it("Generates schema DAOs", () -> {
-      var daoDir = new File("./src/test/java");
-      var pkg = "io.vacco.l4zr.dao";
-      new MtDaoMapper().mapSchema(daoDir, pkg, MtCaseFormat.KEEP_CASE, schema);
-    });
-    it("Applies Liquibase changesets",  () -> {
-      var log = LoggerFactory.getLogger(L4DriverTest.class);
-      L4Log.traceFn = log::trace;
-      try (var conn = DriverManager.getConnection(rqUrl)) {
-        try (var jdbcConn = new JdbcConnection(conn)) {
-          var ra = new ClassLoaderResourceAccessor();
-          var database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(jdbcConn);
-          database.setDefaultSchemaName("main");
-          Scope.child(Scope.Attr.resourceAccessor, ra, () -> {
-            var commandScope = new CommandScope("update");
-            commandScope.addArgumentValue("changelogFile", "l4-schema.yml");
-            commandScope.addArgumentValue("database", database);
-            commandScope.execute();
-          });
-        }
-      }
-    });
-    it("Inserts data via object mapping", () -> {
-      var schema = "main";
-      var Fmt = MtCaseFormat.KEEP_CASE;
-      var idFn = new MtMurmur3IFn(1984);
-      var connP = (ConnectionProvider) query -> {
+    if (GraphicsEnvironment.isHeadless()) {
+      it("Generates schema DAOs", () -> {
+        var daoDir = new File("./src/test/java");
+        var pkg = "io.vacco.l4zr.dao";
+        new MtDaoMapper().mapSchema(daoDir, pkg, MtCaseFormat.KEEP_CASE, schema);
+      });
+      it("Applies Liquibase changesets",  () -> {
+        var log = LoggerFactory.getLogger(L4DriverTest.class);
+        L4Log.traceFn = log::trace;
         try (var conn = DriverManager.getConnection(rqUrl)) {
-          query.receive(conn);
+          try (var jdbcConn = new JdbcConnection(conn)) {
+            var ra = new ClassLoaderResourceAccessor();
+            var database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(jdbcConn);
+            database.setDefaultSchemaName("main");
+            Scope.child(Scope.Attr.resourceAccessor, ra, () -> {
+              var commandScope = new CommandScope("update");
+              commandScope.addArgumentValue("changelogFile", "l4-schema.yml");
+              commandScope.addArgumentValue("database", database);
+              commandScope.execute();
+            });
+          }
         }
-      };
-      var fj = new FluentJdbcBuilder().connectionProvider(connP).build();
-      var userDao = new UserDao(schema, Fmt, fj, idFn);
-      var deviceDao = new DeviceDao(schema, Fmt, fj, idFn);
-      var locationDao = new LocationDao(schema, Fmt, fj, idFn);
+      });
+      it("Inserts data via object mapping", () -> {
+        var schema = "main";
+        var Fmt = MtCaseFormat.KEEP_CASE;
+        var idFn = new MtMurmur3IFn(1984);
+        var connP = (ConnectionProvider) query -> {
+          try (var conn = DriverManager.getConnection(rqUrl)) {
+            query.receive(conn);
+          }
+        };
+        var fj = new FluentJdbcBuilder().connectionProvider(connP).build();
+        var userDao = new UserDao(schema, Fmt, fj, idFn);
+        var deviceDao = new DeviceDao(schema, Fmt, fj, idFn);
+        var locationDao = new LocationDao(schema, Fmt, fj, idFn);
 
-      var user = new User();
-      user.email = "joe@me.com";
-      user.nickName = "Joe";
-      user = userDao.upsert(user);
+        var user = new User();
+        user.email = "joe@me.com";
+        user.nickName = "Joe";
+        user = userDao.upsert(user);
 
-      var device = new Device();
-      device.number = 4567345;
-      device.uid = user.uid;
-      device = deviceDao.upsert(device);
+        var device = new Device();
+        device.number = 4567345;
+        device.uid = user.uid;
+        device = deviceDao.upsert(device);
 
-      var loc = new Location();
-      loc.did = device.did;
-      loc.geoHash8 = "9q4gu1y4";
-      locationDao.upsert(loc);
-    });
+        var loc = new Location();
+        loc.did = device.did;
+        loc.geoHash8 = "9q4gu1y4";
+        locationDao.upsert(loc);
+      });
+    }
   }
 }

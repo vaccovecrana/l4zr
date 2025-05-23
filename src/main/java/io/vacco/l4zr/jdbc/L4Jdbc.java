@@ -417,7 +417,7 @@ public class L4Jdbc {
         case BLOB:              return castBlob(value, columnIndex, sourceJdbcType);
         case TINYINT:           return castByte(value, columnIndex, sourceJdbcType);
         case SMALLINT:          return castShort(value, columnIndex, sourceJdbcType);
-        case NUMERIC: // TODO needs scale metadata
+        case NUMERIC:
         case DECIMAL:           return castBigDecimal(value, columnIndex, sourceJdbcType, scale);
         case DATE:              return castDate(value, columnIndex, sourceJdbcType, cal);
         case TIME:              return castTime(value, columnIndex, sourceJdbcType, cal);
@@ -480,7 +480,8 @@ public class L4Jdbc {
     if (rqliteType == null) {
       throw new IllegalArgumentException("type cannot be null");
     }
-    var rqType = rqliteType.trim().toUpperCase();
+    var parts = rqliteType.trim().toUpperCase().split("[(),]");
+    var rqType = parts[0];
     switch (rqType) {
       case RQ_INTEGER:    return INTEGER;
       case RQ_NUMERIC:    return NUMERIC;

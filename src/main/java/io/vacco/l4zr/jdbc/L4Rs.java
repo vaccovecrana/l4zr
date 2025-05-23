@@ -87,11 +87,11 @@ public class L4Rs implements ResultSet {
   }
 
   private Object tryCast(int columnIndex, int targetJdbcType) throws SQLException {
-    return tryCast(columnIndex, targetJdbcType, 0, null, null);
+    return tryCast(columnIndex, targetJdbcType, -1, null, null);
   }
 
   private Object tryCast(int columnIndex, Class<?> type) throws SQLException {
-    return tryCast(columnIndex, OBJECT_STREAM, 0, null, type);
+    return tryCast(columnIndex, OBJECT_STREAM, -1, null, type);
   }
 
   @Override public String getString(int columnIndex) throws SQLException {

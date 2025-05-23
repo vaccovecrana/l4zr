@@ -101,14 +101,20 @@ public class L4JdbcTest {
 
     it("Tests L4Jdbc getJdbcType", () -> {
       assertEquals(Types.INTEGER, getJdbcType(RQ_INTEGER));
+
       assertEquals(Types.NUMERIC, getJdbcType(RQ_NUMERIC));
+      assertEquals(Types.NUMERIC, getJdbcType("NUMERIC(10,2)"));
+
       assertEquals(Types.BOOLEAN, getJdbcType(RQ_BOOLEAN));
       assertEquals(Types.TINYINT, getJdbcType(RQ_TINYINT));
       assertEquals(Types.SMALLINT, getJdbcType(RQ_SMALLINT));
       assertEquals(Types.BIGINT, getJdbcType(RQ_BIGINT));
       assertEquals(Types.FLOAT, getJdbcType(RQ_FLOAT));
       assertEquals(Types.DOUBLE, getJdbcType(RQ_DOUBLE));
+
       assertEquals(Types.VARCHAR, getJdbcType(RQ_VARCHAR));
+      assertEquals(Types.VARCHAR, getJdbcType("VARCHAR(255)"));
+
       assertEquals(Types.DATE, getJdbcType(RQ_DATE));
       assertEquals(Types.TIME, getJdbcType(RQ_TIME));
       assertEquals(Types.TIMESTAMP, getJdbcType(RQ_TIMESTAMP));

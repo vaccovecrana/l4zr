@@ -30,7 +30,7 @@ public class L4Client implements Closeable {
     this.statusURL = baseURL + "/status";
     this.nodesURL = baseURL + "/nodes";
     this.readyURL = baseURL + "/readyz";
-    this.httpClient = (client != null)
+    this.httpClient = client != null
       ? client
       : L4Http.defaultHttpClient(L4Options.timeoutSec).build();
   }
@@ -150,7 +150,7 @@ public class L4Client implements Closeable {
   }
 
   @Override public void close() {
-    this.httpClient.close();
+    // only Java 21+ supports explicitly closing the http client... sigh...
     this.httpClient = null;
   }
 

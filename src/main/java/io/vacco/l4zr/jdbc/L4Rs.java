@@ -471,7 +471,12 @@ public class L4Rs implements ResultSet {
 
   @Override public Blob getBlob(int columnIndex) throws SQLException {
     var bytes = (byte[]) tryCast(columnIndex, Types.BLOB);
-    return bytes != null ? new SerialBlob(bytes) : null;
+    if (bytes == null) {
+      return null;
+    }
+    var blob = new L4Blob();
+    blob.setBytes(1, bytes);
+    return blob;
   }
 
   @Override public Clob getClob(int columnIndex) throws SQLException {

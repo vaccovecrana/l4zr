@@ -1,10 +1,10 @@
 package io.vacco.l4zr;
 
+import io.vacco.l4zr.dao.*;
 import io.vacco.l4zr.jdbc.L4Log;
 import io.vacco.l4zr.schema.*;
 import io.vacco.metolithe.codegen.dao.MtDaoMapper;
-import io.vacco.metolithe.codegen.liquibase.*;
-import io.vacco.metolithe.core.MtCaseFormat;
+import io.vacco.metolithe.core.*;
 import io.vacco.shax.logging.ShOption;
 import j8spec.annotation.DefinedOrder;
 import j8spec.junit.J8SpecRunner;
@@ -13,6 +13,8 @@ import liquibase.command.CommandScope;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
+import org.codejargon.fluentjdbc.api.FluentJdbcBuilder;
+import org.codejargon.fluentjdbc.api.integration.ConnectionProvider;
 import org.junit.runner.RunWith;
 import org.slf4j.LoggerFactory;
 import java.io.*;
@@ -28,15 +30,12 @@ public class L4DriverTest {
     User.class, Device.class, Location.class
   };
 
+  public static final String rqUrl = "jdbc:sqlite:http://localhost:4001";
+
   static {
     ShOption.setSysProp(ShOption.IO_VACCO_SHAX_DEVMODE, "true");
     ShOption.setSysProp(ShOption.IO_VACCO_SHAX_LOGLEVEL, "trace");
 
-    it("Generates schema classes", () -> {
-      var root = new MtLb().build(MtCaseFormat.KEEP_CASE, schema);
-      var fw = new FileWriter("./src/test/resources/l4-schema.yml");
-      new MtLbYaml().writeSchema(root, fw);
-    });
     it("Generates schema DAOs", () -> {
       var daoDir = new File("./src/test/java");
       var pkg = "io.vacco.l4zr.dao";
@@ -45,7 +44,7 @@ public class L4DriverTest {
     it("Applies Liquibase changesets",  () -> {
       var log = LoggerFactory.getLogger(L4DriverTest.class);
       L4Log.traceFn = log::trace;
-      try (var conn = DriverManager.getConnection("jdbc:sqlite:http://localhost:4001")) {
+      try (var conn = DriverManager.getConnection(rqUrl)) {
         try (var jdbcConn = new JdbcConnection(conn)) {
           var ra = new ClassLoaderResourceAccessor();
           var database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(jdbcConn);
@@ -58,6 +57,35 @@ public class L4DriverTest {
           });
         }
       }
+    });
+    it("Inserts data via object mapping", () -> {
+      var schema = "main";
+      var Fmt = MtCaseFormat.KEEP_CASE;
+      var idFn = new MtMurmur3IFn(1984);
+      var connP = (ConnectionProvider) query -> {
+        try (var conn = DriverManager.getConnection(rqUrl)) {
+          query.receive(conn);
+        }
+      };
+      var fj = new FluentJdbcBuilder().connectionProvider(connP).build();
+      var userDao = new UserDao(schema, Fmt, fj, idFn);
+      var deviceDao = new DeviceDao(schema, Fmt, fj, idFn);
+      var locationDao = new LocationDao(schema, Fmt, fj, idFn);
+
+      var user = new User();
+      user.email = "joe@me.com";
+      user.nickName = "Joe";
+      user = userDao.upsert(user);
+
+      var device = new Device();
+      device.number = 4567345;
+      device.uid = user.uid;
+      device = deviceDao.upsert(device);
+
+      var loc = new Location();
+      loc.did = device.did;
+      loc.geoHash8 = "9q4gu1y4";
+      locationDao.upsert(loc);
     });
   }
 }

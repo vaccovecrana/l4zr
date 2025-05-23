@@ -1,107 +1,64 @@
 databaseChangeLog:
-- changeSet:
-    id: tbl_User
-    author: generated
-    changes:
-    - createTable:
-        tableName: User
-        columns:
-        - column:
-            name: uid
-            type: int
-            constraints: {nullable: 'false', primaryKey: 'true'}
-- changeSet:
-    id: tbl_col_User_email
-    author: generated
-    changes:
-    - addColumn:
-        tableName: User
-        columns:
-        - column:
-            name: email
-            type: varchar(256)
-            constraints: {nullable: 'false'}
-- changeSet:
-    id: tbl_col_User_nickName
-    author: generated
-    changes:
-    - addColumn:
-        tableName: User
-        columns:
-        - column:
-            name: nickName
-            type: varchar(256)
-            constraints: {nullable: 'false'}
-- changeSet:
-    id: unq_User_pk
-    author: generated
-    changes:
-    - addUniqueConstraint: {tableName: User, constraintName: unq_User_pk, columnNames: email}
-- changeSet:
-    id: tbl_Device
-    author: generated
-    changes:
-    - createTable:
-        tableName: Device
-        columns:
-        - column:
-            name: did
-            type: int
-            constraints: {nullable: 'false', primaryKey: 'true'}
-- changeSet:
-    id: tbl_col_Device_uid
-    author: generated
-    changes:
-    - addColumn:
-        tableName: Device
-        columns:
-        - column: {name: uid, type: int}
-- changeSet:
-    id: tbl_col_Device_number
-    author: generated
-    changes:
-    - addColumn:
-        tableName: Device
-        columns:
-        - column: {name: number, type: int}
-- changeSet:
-    id: unq_Device_pk
-    author: generated
-    changes:
-    - addUniqueConstraint: {tableName: Device, constraintName: unq_Device_pk, columnNames: 'uid,number'}
-- changeSet:
-    id: fk_6b5aabfd
-    author: generated
-    changes:
-    - addForeignKeyConstraint: {baseColumnNames: uid, baseTableName: Device, constraintName: fk_6b5aabfd,
-        referencedColumnNames: uid, referencedTableName: User}
-- changeSet:
-    id: tbl_Location
-    author: generated
-    changes:
-    - createTable: {tableName: Location}
-- changeSet:
-    id: tbl_col_Location_did
-    author: generated
-    changes:
-    - addColumn:
-        tableName: Location
-        columns:
-        - column: {name: did, type: int}
-- changeSet:
-    id: tbl_col_Location_geoHash8
-    author: generated
-    changes:
-    - addColumn:
-        tableName: Location
-        columns:
-        - column:
-            name: geoHash8
-            type: varchar(32)
-            constraints: {nullable: 'false'}
-- changeSet:
-    id: fk_8d942324
-    author: generated
-    changes:
-    - addForeignKeyConstraint: {baseColumnNames: did, baseTableName: Location, constraintName: fk_8d942324,
-        referencedColumnNames: did, referencedTableName: Device}
+    - changeSet:
+          id: enable_foreign_keys
+          author: generated
+          changes:
+              - sql:
+                    sql: |
+                        PRAGMA foreign_keys = ON;
+    - changeSet:
+          id: tbl_User
+          author: generated
+          changes:
+              - sql:
+                    sql: |
+                        CREATE TABLE User (
+                            uid INTEGER NOT NULL PRIMARY KEY,
+                            email VARCHAR(256) NOT NULL,
+                            nickName VARCHAR(256) NOT NULL
+                        );
+    - changeSet:
+          id: unq_User_pk
+          author: generated
+          changes:
+              - sql:
+                    sql: |
+                        CREATE UNIQUE INDEX unq_User_pk ON User (email);
+    - changeSet:
+          id: tbl_Device
+          author: generated
+          changes:
+              - sql:
+                    sql: |
+                        CREATE TABLE Device (
+                            did INTEGER NOT NULL PRIMARY KEY,
+                            uid INTEGER,
+                            number INTEGER,
+                            FOREIGN KEY (uid) REFERENCES User (uid)
+                        );
+    - changeSet:
+          id: unq_Device_pk
+          author: generated
+          changes:
+              - sql:
+                    sql: |
+                        CREATE UNIQUE INDEX unq_Device_pk ON Device (uid, number);
+    - changeSet:
+          id: tbl_Location
+          author: generated
+          changes:
+              - sql:
+                    sql: |
+                        CREATE TABLE Location (
+                            lid INTEGER NOT NULL PRIMARY KEY,
+                            did INTEGER,
+                            geoHash8 VARCHAR(32) NOT NULL,
+                            FOREIGN KEY (did) REFERENCES Device (did)
+                        );
+    - changeSet:
+        id: unq_Location_pk
+        author: generated
+        changes:
+          - sql:
+              sql: |
+                CREATE UNIQUE INDEX unq_Location_pk ON Location (did, geoHash8);

@@ -14,13 +14,13 @@ import java.util.Map;
 /**************************************************
  * Generated source file. Do not modify directly. *
  **************************************************/
-public class LocationDao extends MtWriteDao<io.vacco.l4zr.schema.Location, java.lang.Void> {
+public class LocationDao extends MtWriteDao<io.vacco.l4zr.schema.Location, java.lang.Integer> {
 
   public static final String fld_lid = "lid";
   public static final String fld_did = "did";
   public static final String fld_geoHash8 = "geoHash8";
   
-  public LocationDao(String schema, MtCaseFormat fmt, FluentJdbc jdbc, MtIdFn<java.lang.Void> idFn) {
+  public LocationDao(String schema, MtCaseFormat fmt, FluentJdbc jdbc, MtIdFn<java.lang.Integer> idFn) {
     super(schema, jdbc, new MtDescriptor<>(io.vacco.l4zr.schema.Location.class, fmt), idFn);
   }
   

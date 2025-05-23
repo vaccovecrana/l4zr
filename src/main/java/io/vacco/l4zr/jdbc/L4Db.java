@@ -43,7 +43,7 @@ public class L4Db {
     TABLE_CAT = "TABLE_CAT", TABLE_NAME = "TABLE_NAME", TYPE_NAME = "TYPE_NAME",
 
     PK_NAME = "PK_NAME",
-    PKTABLE_NAME = "PKTABLE_NAME", PKTABLE_CAT = "PKTABLE_CAT", PKTABLE_SCHEM = "PKTABLE_SCHEM",
+    PKTABLE_NAME = "PKTABLE_NAME", PKTABLE_SCHEM = "PKTABLE_SCHEM",
     PKCOLUMN_NAME = "PKCOLUMN_NAME",
 
     FKTABLE_CAT = "FKTABLE_CAT", FKTABLE_SCHEM = "FKTABLE_SCHEM", FKTABLE_NAME = "FKTABLE_NAME",
@@ -107,12 +107,11 @@ public class L4Db {
     tableNamePattern = tableNamePattern == null ? "%" : quote(tableNamePattern);
     sql = format(sql, typeFilter, tableNamePattern);
     var response = client.querySingle(sql);
-    var res = response.first().setTypes(
+    return response.first().setTypes(
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR
     );
-    return res;
   }
 
   public static L4Result dbGetCatalogs(L4Client client) {

@@ -38,7 +38,7 @@ public class L4DriverTest {
     ShOption.setSysProp(ShOption.IO_VACCO_SHAX_DEVMODE, "true");
     ShOption.setSysProp(ShOption.IO_VACCO_SHAX_LOGLEVEL, "trace");
 
-    if (GraphicsEnvironment.isHeadless()) {
+    if (!GraphicsEnvironment.isHeadless()) {
       it("Generates schema DAOs", () -> {
         var daoDir = new File("./src/test/java");
         var pkg = "io.vacco.l4zr.dao";

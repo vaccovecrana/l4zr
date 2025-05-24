@@ -1,8 +1,6 @@
 package io.vacco.l4zr.jdbc;
 
 import io.vacco.l4zr.rqlite.L4Result;
-
-import javax.sql.rowset.serial.SerialBlob;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
@@ -16,7 +14,7 @@ import static java.lang.String.format;
 
 public class L4Rs implements ResultSet {
 
-  private final L4Result result;
+  public  final L4Result result;
   private final L4RsMeta meta;
   private final Statement statement;
   private int currentRow = -1; // Before first row

@@ -56,7 +56,7 @@ public class L4Db {
     kDfltValue = "dflt_value", kPk = "pk", kSeq = "seq", kSeqNo = "seqno",
     kNull = "null", kUnique = "unique",
 
-    i0 = "0", i1 = "1", YES = "YES", NO = "NO"
+    i0 = "0", i1 = "1", YES = "YES", NO = "NO", Main = "main"
   ;
 
   private static String itoa(int val) {
@@ -226,7 +226,7 @@ public class L4Db {
       var pk = res.get(kPk, row);
       if (pk != null && !pk.equals(i0)) {
         out.addRow(
-          null, null, tab, res.get(kName, row),
+          null, Main, tab, res.get(kName, row),
           itoa(keySeq[0]++), // TODO double check this.
           format("PK_%s", tab.toUpperCase())
         );

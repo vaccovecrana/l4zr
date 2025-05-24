@@ -2,6 +2,7 @@ package io.vacco.l4zr;
 
 import io.vacco.l4zr.dao.*;
 import io.vacco.l4zr.jdbc.L4Log;
+import io.vacco.l4zr.jdbc.L4Rs;
 import io.vacco.l4zr.schema.*;
 import io.vacco.metolithe.codegen.dao.MtDaoMapper;
 import io.vacco.metolithe.core.*;
@@ -89,6 +90,13 @@ public class L4DriverTest {
         loc.did = device.did;
         loc.geoHash8 = "9q4gu1y4";
         locationDao.upsert(loc);
+
+        try (var conn = DriverManager.getConnection(rqUrl)) {
+          var dbm = conn.getMetaData();
+          try (var lol = (L4Rs) dbm.getPrimaryKeys(null, null, "User")) {
+            lol.result.print(System.out);
+          }
+        }
       });
     }
   }

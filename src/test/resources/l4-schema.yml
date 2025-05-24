@@ -1,12 +1,5 @@
 databaseChangeLog:
     - changeSet:
-          id: enable_foreign_keys
-          author: generated
-          changes:
-              - sql:
-                    sql: |
-                        PRAGMA foreign_keys = ON;
-    - changeSet:
           id: tbl_User
           author: generated
           changes:
@@ -22,8 +15,7 @@ databaseChangeLog:
           author: generated
           changes:
               - sql:
-                    sql: |
-                        CREATE UNIQUE INDEX unq_User_pk ON User (email);
+                    sql: CREATE UNIQUE INDEX unq_User_pk ON User (email);
     - changeSet:
           id: tbl_Device
           author: generated
@@ -41,8 +33,7 @@ databaseChangeLog:
           author: generated
           changes:
               - sql:
-                    sql: |
-                        CREATE UNIQUE INDEX unq_Device_pk ON Device (uid, number);
+                    sql: CREATE UNIQUE INDEX unq_Device_pk ON Device (uid, number);
     - changeSet:
           id: tbl_Location
           author: generated
@@ -60,5 +51,4 @@ databaseChangeLog:
         author: generated
         changes:
           - sql:
-              sql: |
-                CREATE UNIQUE INDEX unq_Location_pk ON Location (did, geoHash8);
+              sql: CREATE UNIQUE INDEX unq_Location_pk ON Location (did, geoHash8);

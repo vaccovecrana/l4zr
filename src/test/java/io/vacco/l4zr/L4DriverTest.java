@@ -98,6 +98,11 @@ public class L4DriverTest {
           }
         }
       });
+      it("Queries table metadata", () -> {
+        try (var conn = DriverManager.getConnection(rqUrl)) {
+          conn.getMetaData().getIndexInfo(null, null, "User", true, false);
+        }
+      });
     }
   }
 }

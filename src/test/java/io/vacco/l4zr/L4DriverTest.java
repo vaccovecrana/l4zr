@@ -90,6 +90,11 @@ public class L4DriverTest {
         loc.geoHash8 = "9q4gu1y4";
         locationDao.upsert(loc);
       });
+      it("Queries table metadata", () -> {
+        try (var conn = DriverManager.getConnection(rqUrl)) {
+          conn.getMetaData().getIndexInfo(null, null, "User", true, false);
+        }
+      });
     }
   }
 }

@@ -13,6 +13,7 @@ public class L4DbMeta implements DatabaseMetaData {
 
   private final L4Client client;
   private final Connection connection; // Optional, can be null if not provided
+  private String sqliteVersion;
 
   public L4DbMeta(L4Client client, Connection connection) {
     this.client = Objects.requireNonNull(client);
@@ -75,9 +76,14 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public String getDatabaseProductVersion() throws SQLException {
+    if (sqliteVersion != null) {
+      return sqliteVersion;
+    }
     try (var rs = executeQuery("SELECT sqlite_version()")) {
       if (rs.next()) {
-        return rs.getString(1);
+        var ver = rs.getString(1);
+        this.sqliteVersion = ver;
+        return ver;
       }
       return "unknown";
     }

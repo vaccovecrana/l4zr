@@ -443,24 +443,19 @@ public class L4Db {
     rs.forEach((i, row) -> {
       var indexName = rs.get(kName, row);
       var isUnique = atoi(rs.get(kUnique, row)) == 1;
-      var idxInfo = client.querySingle(format("PRAGMA index_info('%s')", quote(indexName))).first();
       var iexInfo = client.querySingle(format("PRAGMA index_xinfo('%s')", quote(indexName))).first();
-      idxInfo.forEach((j, row0) -> {
+      iexInfo.forEach((j, row0) -> {
         var skip = unique && !isUnique;
         if (!skip) {
-          var colName = idxInfo.get(kName, row0);
+          var colName = iexInfo.get(kName, row0);
           var colSort = new String[1];
-          iexInfo.forEach((k, row1) -> {
-            var colMatch = iexInfo.get(kName, row1);
-            var desc = atob(iexInfo.get(kDesc, row1));
-            if (colName.equals(colMatch)) {
-              colSort[0] = desc ? "D" : "A";
-            }
-          });
+          var desc = atob(iexInfo.get(kDesc, row0));
+          var seqNo = atoi(iexInfo.get(kSeqNo, row0)) + 1;
+          colSort[0] = desc ? "D" : "A";
           out.addRow(
             catalog, null, table,
             btoa(!isUnique), null, indexName, itoa(DatabaseMetaData.tableIndexOther),
-            itoa(atoi(idxInfo.get(kSeqNo, row0)) + 1), colName, colSort[0], itoa(0),
+            itoa(seqNo), colName, colSort[0], itoa(0),
             itoa(0), null
           );
         }

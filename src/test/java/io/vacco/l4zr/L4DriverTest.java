@@ -1,8 +1,8 @@
 package io.vacco.l4zr;
 
 import io.vacco.l4zr.dao.*;
-import io.vacco.l4zr.jdbc.L4Log;
-import io.vacco.l4zr.jdbc.L4Rs;
+import io.vacco.l4zr.jdbc.*;
+import io.vacco.l4zr.rqlite.L4Client;
 import io.vacco.l4zr.schema.*;
 import io.vacco.metolithe.codegen.dao.MtDaoMapper;
 import io.vacco.metolithe.core.*;
@@ -34,6 +34,7 @@ public class L4DriverTest {
   };
 
   public static final String rqUrl = "jdbc:sqlite:http://localhost:4001";
+  public static final L4Client rq = L4Tests.localClient();
 
   static {
     ShOption.setSysProp(ShOption.IO_VACCO_SHAX_DEVMODE, "true");
@@ -100,8 +101,19 @@ public class L4DriverTest {
       });
       it("Queries table metadata", () -> {
         try (var conn = DriverManager.getConnection(rqUrl)) {
-          conn.getMetaData().getIndexInfo(null, null, "User", true, false);
+          var usrIdx = (L4Rs) conn.getMetaData().getIndexInfo(null, null, "User", true, false);
+          var devIdx = (L4Rs) conn.getMetaData().getIndexInfo(null, null, "Device", true, false);
+          var locIdx = (L4Rs) conn.getMetaData().getIndexInfo(null, null, "Location", true, false);
+          usrIdx.result.print(System.out);
+          devIdx.result.print(System.out);
+          locIdx.result.print(System.out);
         }
+        var usrCols = L4Db.dbGetColumns("User", null, rq);
+        var devCols = L4Db.dbGetColumns("Device", null, rq);
+        var locCols = L4Db.dbGetColumns("Location", null, rq);
+        usrCols.print(System.out);
+        devCols.print(System.out);
+        locCols.print(System.out);
       });
     }
   }

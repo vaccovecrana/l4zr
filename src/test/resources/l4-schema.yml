@@ -24,8 +24,8 @@ databaseChangeLog:
                     sql: |
                         CREATE TABLE Device (
                             did INTEGER NOT NULL PRIMARY KEY,
-                            uid INTEGER,
-                            number INTEGER,
+                            uid INTEGER NOT NULL,
+                            number INTEGER NOT NULL,
                             FOREIGN KEY (uid) REFERENCES User (uid)
                         );
     - changeSet:
@@ -42,7 +42,7 @@ databaseChangeLog:
                     sql: |
                         CREATE TABLE Location (
                             lid INTEGER NOT NULL PRIMARY KEY,
-                            did INTEGER,
+                            did INTEGER NOT NULL,
                             geoHash8 VARCHAR(32) NOT NULL,
                             FOREIGN KEY (did) REFERENCES Device (did)
                         );

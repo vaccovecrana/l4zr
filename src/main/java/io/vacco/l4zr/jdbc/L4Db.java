@@ -49,14 +49,14 @@ public class L4Db {
     FKTABLE_CAT = "FKTABLE_CAT", FKTABLE_SCHEM = "FKTABLE_SCHEM", FKTABLE_NAME = "FKTABLE_NAME",
     FKCOLUMN_NAME = "FKCOLUMN_NAME",
 
-    kDesc = "desc", kFrom = "from",
+    kCid = "cid", kDesc = "desc", kFrom = "from",
     kName = "name", kOnDelete = "on_delete",
     kTable = "table", kTemp = "temp", kTo = "to",
     kType = "type", kNotNull = "notnull",
     kDfltValue = "dflt_value", kPk = "pk", kSeq = "seq", kSeqNo = "seqno",
     kNull = "null", kUnique = "unique",
 
-    i0 = "0", i1 = "1", YES = "YES", NO = "NO", Main = "main"
+    YES = "YES", NO = "NO", Main = "main"
   ;
 
   private static String itoa(int val) {
@@ -138,12 +138,12 @@ public class L4Db {
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, NULL AS TABLE_NAME, ",
-      "  NULL COLUMN_NAME, 0 AS DATA_TYPE, NULL TYPE_NAME, 0 AS COLUMN_SIZE, ",
-      "  0 AS BUFFER_LENGTH, 0 AS DECIMAL_DIGITS, 0 AS NUM_PREC_RADIX, 0 AS NULLABLE, ",
-      "  NULL REMARKS, NULL COLUMN_DEF, 0 AS SQL_DATA_TYPE, 0 AS SQL_DATETIME_SUB, ",
-      "  0 AS CHAR_OCTET_LENGTH, 0 AS ORDINAL_POSITION, NULL IS_NULLABLE, NULL SCOPE_CATALOG, ",
-      "  NULL SCOPE_SCHEMA, NULL SCOPE_TABLE, 0 AS SOURCE_DATA_TYPE, NULL IS_AUTOINCREMENT, ",
-      "  NULL IS_GENERATEDCOLUMN",
+      "         NULL COLUMN_NAME, 0 AS DATA_TYPE, NULL TYPE_NAME, 0 AS COLUMN_SIZE, ",
+      "         0 AS BUFFER_LENGTH, 0 AS DECIMAL_DIGITS, 0 AS NUM_PREC_RADIX, 0 AS NULLABLE, ",
+      "         NULL REMARKS, NULL COLUMN_DEF, 0 AS SQL_DATA_TYPE, 0 AS SQL_DATETIME_SUB, ",
+      "         0 AS CHAR_OCTET_LENGTH, 0 AS ORDINAL_POSITION, NULL IS_NULLABLE, NULL SCOPE_CATALOG, ",
+      "         NULL SCOPE_SCHEMA, NULL SCOPE_TABLE, 0 AS SOURCE_DATA_TYPE, NULL IS_AUTOINCREMENT, ",
+      "         NULL IS_GENERATEDCOLUMN",
       ") WHERE 1 = 0"
     )).first().setTypes(
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
@@ -168,37 +168,32 @@ public class L4Db {
         var colName = res0.get(kName, row0);
         if (matchesPattern(colName, columnNamePattern)) {
           var type = res0.get(kType, row0);
-          var notNull = res0.get(kNotNull, row0);
+          var notNull = atoi(res0.get(kNotNull, row0));
           var defaultValue = res0.get(kDfltValue, row0);
-          var pk = res0.get(kPk, row0);
-          var isAutoIncrement = pk != null
-            && pk.equals(i1)
+          var pk = atoi(res0.get(kPk, row0));
+          var isAutoIncrement = pk == 1
             && type.contains(RQ_INTEGER)
             && defaultValue != null
             && defaultValue.equalsIgnoreCase(kNull);
           var sqlType = getJdbcType(type);
           var columnSize = getJdbcTypePrecision(type);
           var decimalDigits = 0;
-
+          var nullable = notNull == 1 ? DatabaseMetaData.columnNoNulls : DatabaseMetaData.columnNullable;
           out.addRow(tableCatalog,
             null, tableName, colName, itoa(sqlType), type,
             itoa(columnSize), itoa(0), itoa(decimalDigits), itoa(10),
-            itoa( // NULLABLE
-              notNull != null && notNull.equals(i1)
-                ? DatabaseMetaData.columnNullable
-                : DatabaseMetaData.columnNoNulls
-            ),
-            null, // REMARKS
-            defaultValue, // COLUMN_DEF
-            itoa(sqlType), // SQL_DATA_TYPE
-            itoa(0), // SQL_DATETIME_SUB
-            itoa(columnSize), // CHAR_OCTET_LENGTH
-            itoa(ordinal), // ORDINAL_POSITION
-            notNull != null && notNull.equals(i1) ? YES : NO, // IS_NULLABLE
-            null, // SCOPE_CATALOG
-            null, // SCOPE_SCHEMA
-            null, // SCOPE_TABLE
-            itoa(0), // SOURCE_DATA_TYPE
+            itoa(nullable),
+            null,                       // REMARKS
+            defaultValue,               // COLUMN_DEF
+            itoa(sqlType),              // SQL_DATA_TYPE
+            itoa(0),                    // SQL_DATETIME_SUB
+            itoa(columnSize),           // CHAR_OCTET_LENGTH
+            itoa(ordinal),              // ORDINAL_POSITION
+            notNull == 0 ? YES : NO,    // IS_NULLABLE
+            null,                       // SCOPE_CATALOG
+            null,                       // SCOPE_SCHEMA
+            null,                       // SCOPE_TABLE
+            itoa(0),                    // SOURCE_DATA_TYPE
             isAutoIncrement ? YES : NO, // IS_AUTOINCREMENT
             NO // IS_GENERATEDCOLUMN
           );
@@ -223,8 +218,8 @@ public class L4Db {
     var res = client.querySingle(format("PRAGMA table_info('%s')", tab)).first();
     final var keySeq = new int[] { 1 };
     res.forEach((i, row) -> {
-      var pk = res.get(kPk, row);
-      if (pk != null && !pk.equals(i0)) {
+      var pk = atoi(res.get(kPk, row));
+      if (pk == 0) {
         out.addRow(
           null, Main, tab, res.get(kName, row),
           itoa(keySeq[0]++), // TODO double check this.
@@ -446,7 +441,7 @@ public class L4Db {
       var iexInfo = client.querySingle(format("PRAGMA index_xinfo('%s')", quote(indexName))).first();
       iexInfo.forEach((j, row0) -> {
         var skip = unique && !isUnique;
-        if (!skip) {
+        if (!skip && (atoi(iexInfo.get(kCid, row0)) != -1)) {
           var colName = iexInfo.get(kName, row0);
           var colSort = new String[1];
           var desc = atob(iexInfo.get(kDesc, row0));

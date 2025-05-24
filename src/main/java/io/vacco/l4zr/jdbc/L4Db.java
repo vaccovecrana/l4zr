@@ -219,11 +219,11 @@ public class L4Db {
     final var keySeq = new int[] { 1 };
     res.forEach((i, row) -> {
       var pk = atoi(res.get(kPk, row));
-      if (pk == 0) {
+      if (pk == 1) {
         out.addRow(
           null, Main, tab, res.get(kName, row),
           itoa(keySeq[0]++), // TODO double check this.
-          format("PK_%s", tab.toUpperCase())
+          format("PK_%s", tab)
         );
       }
     });
@@ -269,8 +269,8 @@ public class L4Db {
       "SELECT * FROM (",
       "  SELECT NULL AS PKTABLE_CAT, NULL AS PKTABLE_SCHEM, NULL AS PKTABLE_NAME, ",
       "         NULL AS PKCOLUMN_NAME, NULL AS FKTABLE_CAT, NULL AS FKTABLE_SCHEM, ",
-      "         NULL AS FKTABLE_NAME, NULL AS FKCOLUMN_NAME, 0 AS KEY_SEQ, 0 AS UPDATE_RULE, ",
-      "         0 AS DELETE_RULE, NULL AS FK_NAME, NULL AS PK_NAME, 0 AS DEFERRABILITY",
+      "         NULL AS FKTABLE_NAME, NULL AS FKCOLUMN_NAME, 0 AS KEY_SEQ, ",
+      "         0 AS UPDATE_RULE, 0 AS DELETE_RULE, NULL AS FK_NAME, NULL AS PK_NAME, 0 AS DEFERRABILITY",
       ") WHERE 1 = 0"
     )).first().setTypes(
       RQ_VARCHAR, RQ_VARCHAR, RQ_VARCHAR,
@@ -282,23 +282,23 @@ public class L4Db {
     var rs = client.querySingle(format("PRAGMA foreign_key_list('%s')", tab)).first();
     rs.forEach((i, row) -> {
       var seq = Integer.toString(Integer.parseInt(rs.get(kSeq, row)) + 1);
-      var from = rs.get(kFrom, row);
-      var to = rs.get(kTo, row);
+      var fromCol = rs.get(kFrom, row);
+      var toCol = rs.get(kTo, row);
+      var toTable = rs.get(kTable, row);
       var onDelete = rs.get(kOnDelete, row);
+      var updateRule = itoa(DatabaseMetaData.importedKeyNoAction);
+      var deleteRule = itoa(
+        onDelete != null && onDelete.equals(CASCADE)
+          ? DatabaseMetaData.importedKeyCascade
+          : DatabaseMetaData.importedKeyNoAction
+      );
       out.addRow(
-        null, null,
-        rs.get(kTable, row), to,
-        null, null, tab,
-        from, seq,
-        itoa(DatabaseMetaData.importedKeyNoAction), // UPDATE_RULE (SQLite does not support ON UPDATE)
-        itoa(
-          onDelete != null && onDelete.equals(CASCADE)
-            ? DatabaseMetaData.importedKeyCascade
-            : DatabaseMetaData.importedKeyNoAction
-        ),
-        format("FK_%s_%s", tab.toUpperCase(), from.toUpperCase()), // FK_NAME (synthetic)
-        format("PK_%s", to.toUpperCase()),
-        itoa(DatabaseMetaData.importedKeyNotDeferrable) // DEFERRABILITY
+        null, Main, toTable,
+        toCol, null, Main,
+        tab, fromCol, seq,
+        updateRule, deleteRule,
+        format("FK_%s_%s", tab, fromCol), format("PK_%s", toTable),
+        itoa(DatabaseMetaData.importedKeyNotDeferrable)
       );
     });
     return out;
@@ -327,20 +327,21 @@ public class L4Db {
       fkRs.forEach((j, row0) -> {
         if (table.equals(fkRs.get(kTable, row0))) {
           var seq = itoa(atoi(fkRs.get(kSeq, row0)) + 1);
-          var from = fkRs.get(kFrom, row0);
-          var to = fkRs.get(kTo, row0);
+          var fromCol = fkRs.get(kFrom, row0);
+          var toCol = fkRs.get(kTo, row0);
           var onDelete = fkRs.get(kOnDelete, row0);
+          var updateRule = itoa(DatabaseMetaData.importedKeyNoAction);
+          var deleteRule = itoa(
+            onDelete != null && onDelete.equals(CASCADE)
+              ? DatabaseMetaData.importedKeyCascade
+              : DatabaseMetaData.importedKeyNoAction
+          );
           out.addRow(
-            null, null, table,
-            to, null, null, fkTable, from,
-            seq, itoa(DatabaseMetaData.importedKeyNoAction),
-            itoa(
-              onDelete != null && onDelete.equals(CASCADE)
-                ? DatabaseMetaData.importedKeyCascade
-                : DatabaseMetaData.importedKeyNoAction
-            ),
-            format("FK_%s_%s", fkTable.toUpperCase(), from.toUpperCase()),
-            format("PK_%s", to.toUpperCase()),
+            null, Main, table,
+            toCol, null, Main, fkTable, fromCol,
+            seq, updateRule, deleteRule,
+            format("FK_%s_%s", fkTable, fromCol),
+            format("PK_%s", fkTable),
             itoa(DatabaseMetaData.importedKeyNotDeferrable)
           );
         }

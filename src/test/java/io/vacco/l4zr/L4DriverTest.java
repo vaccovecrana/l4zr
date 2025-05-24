@@ -100,20 +100,21 @@ public class L4DriverTest {
         }
       });
       it("Queries table metadata", () -> {
+        var tables = new String[] { "User", "Device", "Location" };
         try (var conn = DriverManager.getConnection(rqUrl)) {
-          var usrIdx = (L4Rs) conn.getMetaData().getIndexInfo(null, null, "User", true, false);
-          var devIdx = (L4Rs) conn.getMetaData().getIndexInfo(null, null, "Device", true, false);
-          var locIdx = (L4Rs) conn.getMetaData().getIndexInfo(null, null, "Location", true, false);
-          usrIdx.result.print(System.out);
-          devIdx.result.print(System.out);
-          locIdx.result.print(System.out);
+          for (var table : tables) {
+            var idx = (L4Rs) conn.getMetaData().getIndexInfo(null, null, table, true, false);
+            var cols = L4Db.dbGetColumns(table, null, rq);
+            var pk = L4Db.dbGetPrimaryKeys(table, rq);
+            var fkImp = L4Db.dbGetImportedKeys(table, rq);
+            var fkExp = L4Db.dbGetExportedKeys(table, rq);
+            idx.result.print(System.out);
+            cols.print(System.out);
+            pk.print(System.out);
+            fkImp.print(System.out);
+            fkExp.print(System.out);
+          }
         }
-        var usrCols = L4Db.dbGetColumns("User", null, rq);
-        var devCols = L4Db.dbGetColumns("Device", null, rq);
-        var locCols = L4Db.dbGetColumns("Location", null, rq);
-        usrCols.print(System.out);
-        devCols.print(System.out);
-        locCols.print(System.out);
       });
     }
   }

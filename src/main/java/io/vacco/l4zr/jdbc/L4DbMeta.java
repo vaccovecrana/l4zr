@@ -616,7 +616,7 @@ public class L4DbMeta implements DatabaseMetaData {
 
   @Override public ResultSet getIndexInfo(String catalog, String schema, String table,
                                           boolean unique, boolean approximate) throws SQLException {
-    return sqlRun(() -> new L4Rs(dbGetIndexInfo(catalog, table, unique, client), null));
+    return sqlRun(() -> new L4Rs(dbGetIndexInfo(table, unique, client), null));
   }
 
   // ResultSet Support

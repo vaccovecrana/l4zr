@@ -420,8 +420,7 @@ public class L4Db {
     return out;
   }
 
-  public static L4Result dbGetIndexInfo(String catalog, String table,
-                                        boolean unique, L4Client client) {
+  public static L4Result dbGetIndexInfo(String table, boolean unique, L4Client client) {
     var out = client.querySingle(join("\n", "",
       "SELECT * FROM (",
       "  SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, NULL AS TABLE_NAME, ",
@@ -449,7 +448,7 @@ public class L4Db {
           var seqNo = atoi(iexInfo.get(kSeqNo, row0)) + 1;
           colSort[0] = desc ? "D" : "A";
           out.addRow(
-            catalog, null, table,
+            null, Main, table,
             btoa(!isUnique), null, indexName, itoa(DatabaseMetaData.tableIndexOther),
             itoa(seqNo), colName, colSort[0], itoa(0),
             itoa(0), null

@@ -49,7 +49,7 @@ public class L4DbMetaTest {
     // Create metadata_table table (same as L4RsTest)
     var createTable = join("\n", "",
       "CREATE TABLE metadata_table (",
-      "  id INTEGER PRIMARY KEY AUTOINCREMENT,",
+      "  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,",
       "  num_val NUMERIC,",
       "  bool_val BOOLEAN,",
       "  tiny_val TINYINT,",
@@ -426,7 +426,7 @@ public class L4DbMetaTest {
         assertEquals(1, rows.size());
         var pk = rows.get(0);
         assertNull(pk.get("TABLE_CAT"));
-        assertNull(pk.get("TABLE_SCHEM"));
+        assertEquals(L4Db.Main, pk.get("TABLE_SCHEM"));
         assertEquals("metadata_table", pk.get("TABLE_NAME"));
         assertEquals("id", pk.get("COLUMN_NAME"));
         assertEquals(1, pk.get("KEY_SEQ"));
@@ -452,11 +452,11 @@ public class L4DbMetaTest {
         assertEquals(1, rows.size());
         var fk = rows.get(0);
         assertNull(fk.get("PKTABLE_CAT"));
-        assertNull(fk.get("PKTABLE_SCHEM"));
+        assertEquals(L4Db.Main, fk.get("PKTABLE_SCHEM"));
         assertEquals("metadata_table", fk.get("PKTABLE_NAME"));
         assertEquals("id", fk.get("PKCOLUMN_NAME"));
         assertNull(fk.get("FKTABLE_CAT"));
-        assertNull(fk.get("FKTABLE_SCHEM"));
+        assertEquals(L4Db.Main, fk.get("FKTABLE_SCHEM"));
         assertEquals("related_table", fk.get("FKTABLE_NAME"));
         assertEquals("test_id", fk.get("FKCOLUMN_NAME"));
         assertEquals(1, fk.get("KEY_SEQ"));
@@ -471,11 +471,11 @@ public class L4DbMetaTest {
         assertEquals(1, rows.size());
         var ek = rows.get(0);
         assertNull(ek.get("PKTABLE_CAT"));
-        assertNull(ek.get("PKTABLE_SCHEM"));
+        assertEquals(L4Db.Main, ek.get("PKTABLE_SCHEM"));
         assertEquals("metadata_table", ek.get("PKTABLE_NAME"));
         assertEquals("id", ek.get("PKCOLUMN_NAME"));
         assertNull(ek.get("FKTABLE_CAT"));
-        assertNull(ek.get("FKTABLE_SCHEM"));
+        assertEquals(L4Db.Main, ek.get("FKTABLE_SCHEM"));
         assertEquals("related_table", ek.get("FKTABLE_NAME"));
         assertEquals("test_id", ek.get("FKCOLUMN_NAME"));
 
@@ -500,7 +500,7 @@ public class L4DbMetaTest {
           if ("small_val".equals(row.get("COLUMN_NAME")) && "metadata_index".equals(row.get("INDEX_NAME"))) {
             foundPkIndex = true;
             assertNull(row.get("TABLE_CAT"));
-            assertNull(row.get("TABLE_SCHEM"));
+            assertEquals(L4Db.Main, row.get("TABLE_SCHEM"));
             assertEquals("metadata_table", row.get("TABLE_NAME"));
             assertFalse((Boolean) row.get("NON_UNIQUE"));
             assertEquals("small_val", row.get("COLUMN_NAME"));

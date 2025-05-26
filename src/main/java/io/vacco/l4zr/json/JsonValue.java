@@ -1,30 +1,10 @@
-/*******************************************************************************
- * Copyright (c) 2013, 2017 EclipseSource.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- ******************************************************************************/
 package io.vacco.l4zr.json;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Serializable;
-
+import java.io.StringWriter;
+import java.io.Writer;
 
 /**
  * Represents a JSON value. This can be a JSON <strong>object</strong>, an <strong> array</strong>,
@@ -395,6 +375,77 @@ public abstract class JsonValue implements Serializable {
   }
 
   /**
+   * Writes the JSON representation of this value to the given writer in its minimal form, without
+   * any additional whitespace.
+   * <p>
+   * Writing performance can be improved by using a {@link java.io.BufferedWriter BufferedWriter}.
+   * </p>
+   *
+   * @param writer
+   *          the writer to write this value to
+   * @throws IOException
+   *           if an I/O error occurs in the writer
+   */
+  public void writeTo(Writer writer) throws IOException {
+    writeTo(writer, WriterConfig.MINIMAL);
+  }
+
+  /**
+   * Writes the JSON representation of this value to the given writer using the given formatting.
+   * <p>
+   * Writing performance can be improved by using a {@link java.io.BufferedWriter BufferedWriter}.
+   * </p>
+   *
+   * @param writer
+   *          the writer to write this value to
+   * @param config
+   *          a configuration that controls the formatting or <code>null</code> for the minimal form
+   * @throws IOException
+   *           if an I/O error occurs in the writer
+   */
+  public void writeTo(Writer writer, WriterConfig config) throws IOException {
+    if (writer == null) {
+      throw new NullPointerException("writer is null");
+    }
+    if (config == null) {
+      throw new NullPointerException("config is null");
+    }
+    WritingBuffer buffer = new WritingBuffer(writer, 128);
+    write(config.createWriter(buffer));
+    buffer.flush();
+  }
+
+  /**
+   * Returns the JSON string for this value in its minimal form, without any additional whitespace.
+   * The result is guaranteed to be a valid input for the method {@link Json#parse(String)} and to
+   * create a value that is <em>equal</em> to this object.
+   *
+   * @return a JSON string that represents this value
+   */
+  @Override
+  public String toString() {
+    return toString(WriterConfig.MINIMAL);
+  }
+
+  /**
+   * Returns the JSON string for this value using the given formatting.
+   *
+   * @param config
+   *          a configuration that controls the formatting or <code>null</code> for the minimal form
+   * @return a JSON string that represents this value
+   */
+  public String toString(WriterConfig config) {
+    StringWriter writer = new StringWriter();
+    try {
+      writeTo(writer, config);
+    } catch (IOException exception) {
+      // StringWriter does not throw IOExceptions
+      throw new RuntimeException(exception);
+    }
+    return writer.toString();
+  }
+
+  /**
    * Indicates whether some other object is "equal to" this one according to the contract specified
    * in {@link Object#equals(Object)}.
    * <p>
@@ -416,5 +467,7 @@ public abstract class JsonValue implements Serializable {
   public int hashCode() {
     return super.hashCode();
   }
+
+  abstract void write(JsonWriter writer) throws IOException;
 
 }

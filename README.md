@@ -24,6 +24,8 @@ Install from [Maven Central](https://mvnrepository.com/artifact/io.vacco.l4zr/l4
 
     io.vacco.l4zr:l4zr:[version]
 
+The driver version corresponds to the last known `rqlite` [release](https://github.com/rqlite/rqlite/releases) the driver was tested against.
+
 ## Basic Usage
 
 Connect to an `rqlite` instance and execute queries using standard JDBC APIs.

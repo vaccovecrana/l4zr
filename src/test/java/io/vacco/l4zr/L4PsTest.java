@@ -8,7 +8,7 @@ import org.junit.runner.RunWith;
 import java.awt.GraphicsEnvironment;
 import java.io.*;
 import java.math.BigDecimal;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.sql.Date;
@@ -50,7 +50,7 @@ public class L4PsTest {
         ps.setDate(10, Date.valueOf("2023-10-15")); // date_val
         ps.setTime(11, Time.valueOf("14:30:00")); // time_val
         ps.setTimestamp(12, Timestamp.valueOf("2023-10-15 14:30:00")); // ts_val
-        ps.setURL(13, new URL("https://example.com")); // url_val
+        ps.setURL(13, new URI("https://example.com").toURL()); // url_val
         ps.setString(14, "This is a CLOB"); // clob_val
         ps.setNString(15, "This is an NCLOB"); // nclob_val
         ps.setNString(16, "This is an NSTRING"); // nstring_val
@@ -78,7 +78,7 @@ public class L4PsTest {
         assertEquals(Date.valueOf("2023-10-14").toString(), rs.getDate("date_val", utcCalendar).toString());
         assertEquals(Time.valueOf("09:30:00"), rs.getTime("time_val", utcCalendar));
         assertEquals(Timestamp.valueOf("2023-10-15 10:30:00"), rs.getTimestamp("ts_val", utcCalendar));
-        assertEquals(new URL("https://example.com"), rs.getURL("url_val"));
+        assertEquals(new URI("https://example.com").toURL(), rs.getURL("url_val"));
         assertEquals("This is a CLOB", rs.getClob("clob_val").getSubString(1, 14));
         assertEquals("This is an NCLOB", rs.getNClob("nclob_val").getSubString(1, 16));
         assertEquals("This is an NSTRING", rs.getNString("nstring_val"));

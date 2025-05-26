@@ -9,7 +9,7 @@ import org.junit.runner.RunWith;
 
 import java.io.*;
 import java.math.BigDecimal;
-import java.net.URL;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.*;
@@ -291,7 +291,7 @@ public class L4JdbcTest {
 
     it("Tests L4Jdbc URL conversion", () -> {
       int colIdx = 1;
-      URL expectedUrl = new URL("https://example.com");
+      var expectedUrl = new URI("https://example.com").toURL();
       assertEquals(expectedUrl, castURL("https://example.com", colIdx, Types.DATALINK));
       assertEquals(expectedUrl, castURL("https://example.com", colIdx, Types.VARCHAR));
       runFail(() -> castURL("invalid-url", colIdx, Types.DATALINK), SqlStateInvalidType);
@@ -440,7 +440,7 @@ public class L4JdbcTest {
       runFail(() -> convertValue(value, Types.BLOB, NCHARACTER_STREAM, colIdx, -1, null, null), SqlStateInvalidConversion);
 
       // URL_STREAM
-      var expectedUrl = new URL("https://example.com");
+      var expectedUrl = new URI("https://example.com").toURL();
       assertEquals(expectedUrl, convertValue("https://example.com", Types.DATALINK, URL_STREAM, colIdx, -1, null, null));
       runFail(() -> convertValue("invalid-url", Types.DATALINK, URL_STREAM, colIdx, -1, null, null), SqlStateInvalidType);
 

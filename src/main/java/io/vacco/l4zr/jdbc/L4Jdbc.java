@@ -344,8 +344,8 @@ public class L4Jdbc {
   public static URL castURL(String value, int columnIndex, int sourceJdbcType) throws SQLException {
     if (anyOf(sourceJdbcType, VARCHAR, DATALINK)) {
       try {
-        return new URL(value);
-      } catch (MalformedURLException e) {
+        return new URI(value).toURL();
+      } catch (Exception e) {
         throw badUrl(columnIndex, value, e);
       }
     }

@@ -325,7 +325,7 @@ public class L4DbMetaTest {
         assertFalse(rows.isEmpty()); // At least 'main' database
         var foundMain = false;
         for (var row : rows) {
-          if ("main".equals(row.get("TABLE_CAT"))) {
+          if (Main.equals(row.get("TABLE_CAT"))) {
             foundMain = true;
             break;
           }

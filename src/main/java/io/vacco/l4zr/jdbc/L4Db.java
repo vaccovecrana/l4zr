@@ -44,10 +44,10 @@ public class L4Db {
     TABLE_CAT = "TABLE_CAT", TABLE_NAME = "TABLE_NAME", TYPE_NAME = "TYPE_NAME",
 
     PK_NAME = "PK_NAME",
-    PKTABLE_NAME = "PKTABLE_NAME", PKTABLE_SCHEM = "PKTABLE_SCHEM",
+    PKTABLE_NAME = "PKTABLE_NAME",
     PKCOLUMN_NAME = "PKCOLUMN_NAME",
 
-    FKTABLE_CAT = "FKTABLE_CAT", FKTABLE_SCHEM = "FKTABLE_SCHEM", FKTABLE_NAME = "FKTABLE_NAME",
+    FKTABLE_NAME = "FKTABLE_NAME",
     FKCOLUMN_NAME = "FKCOLUMN_NAME",
 
     kCid = "cid", kDesc = "desc", kFrom = "from",
@@ -57,7 +57,7 @@ public class L4Db {
     kDfltValue = "dflt_value", kPk = "pk", kSeq = "seq",
     kNull = "null", kUnique = "unique",
 
-    YES = "YES", NO = "NO", Main = "main", All = "%", SQLite = "sqlite"
+    YES = "YES", NO = "NO", Main = "main", All = "%"
   ;
 
   private static String itoa(int val) {

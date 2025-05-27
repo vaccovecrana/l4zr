@@ -52,7 +52,7 @@ public class L4DriverTest {
           try (var jdbcConn = new JdbcConnection(conn)) {
             var ra = new ClassLoaderResourceAccessor();
             var database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(jdbcConn);
-            database.setDefaultSchemaName("main");
+            database.setDefaultCatalogName(L4Db.Main);
             Scope.child(Scope.Attr.resourceAccessor, ra, () -> {
               var commandScope = new CommandScope("update");
               commandScope.addArgumentValue("changelogFile", "l4-schema.yml");
@@ -63,7 +63,6 @@ public class L4DriverTest {
         }
       });
       it("Inserts data via object mapping", () -> {
-        var schema = "main";
         var Fmt = MtCaseFormat.KEEP_CASE;
         var idFn = new MtMurmur3IFn(1984);
         var connP = (ConnectionProvider) query -> {
@@ -72,9 +71,9 @@ public class L4DriverTest {
           }
         };
         var fj = new FluentJdbcBuilder().connectionProvider(connP).build();
-        var userDao = new UserDao(schema, Fmt, fj, idFn);
-        var deviceDao = new DeviceDao(schema, Fmt, fj, idFn);
-        var locationDao = new LocationDao(schema, Fmt, fj, idFn);
+        var userDao = new UserDao(L4Db.Main, Fmt, fj, idFn);
+        var deviceDao = new DeviceDao(L4Db.Main, Fmt, fj, idFn);
+        var locationDao = new LocationDao(L4Db.Main, Fmt, fj, idFn);
 
         var user = new User();
         user.email = "joe@me.com";

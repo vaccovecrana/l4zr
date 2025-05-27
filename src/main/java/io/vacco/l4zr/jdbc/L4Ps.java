@@ -381,7 +381,7 @@ public class L4Ps extends L4St implements PreparedStatement {
 
   @Override public ParameterMetaData getParameterMetaData() throws SQLException {
     checkClosed();
-    throw notSupported("Parameter metadata"); // TODO possible enhancement for rqlite itself
+    return new L4PsPm(statement); // TODO possible enhancement for rqlite itself
   }
 
   @Override public void setRowId(int parameterIndex, RowId x) throws SQLException {

@@ -6,8 +6,8 @@ import java.util.*;
 public class L4Statement {
 
   public String sql;
-  private List<Object> positionalParams = new ArrayList<>();
-  private Map<String, Object> namedParams;
+  public final List<Object> positionalParams = new ArrayList<>();
+  public final Map<String, Object> namedParams = new LinkedHashMap<>();
 
   public L4Statement sql(String sql) {
     this.sql = Objects.requireNonNull(sql);
@@ -25,7 +25,7 @@ public class L4Statement {
   }
 
   private void checkNamedParams() {
-    if (namedParams != null && !namedParams.isEmpty()) {
+    if (!namedParams.isEmpty()) {
       badParams();
     }
   }
@@ -50,22 +50,21 @@ public class L4Statement {
 
   public L4Statement withPositionalParams(Object... params) {
     checkNamedParams();
-    this.positionalParams = new ArrayList<>(Arrays.asList(params));
+    this.positionalParams.clear();
+    this.positionalParams.addAll(Arrays.asList(params));
     return this;
   }
 
   public L4Statement withNamedParam(String name, Object value) {
     checkPositionalParams();
-    if (this.namedParams == null) {
-      this.namedParams = new LinkedHashMap<>();
-    }
     this.namedParams.put(name, value);
     return this;
   }
 
   public L4Statement withNamedParams(Map<String, Object> params) {
     checkPositionalParams();
-    this.namedParams = new LinkedHashMap<>(params);
+    this.namedParams.clear();
+    this.namedParams.putAll(params);
     return this;
   }
 
@@ -75,7 +74,7 @@ public class L4Statement {
     }
     var out = new JsonArray();
     out.add(sql);
-    if (namedParams != null && !namedParams.isEmpty()) {
+    if (!namedParams.isEmpty()) {
       var paramsObject = new JsonObject();
       for (var entry : namedParams.entrySet()) {
         paramsObject.add(entry.getKey(), L4Json.toJsonValue(entry.getValue()));

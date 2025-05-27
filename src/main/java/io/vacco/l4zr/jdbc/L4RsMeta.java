@@ -67,17 +67,7 @@ public class L4RsMeta implements ResultSetMetaData {
   @Override public boolean isSigned(int column) throws SQLException {
     checkColumn(column, result);
     var type = result.types.get(column - 1);
-    if (type == null || RQ_NULL.equalsIgnoreCase(type)) {
-      return false; // NULL or unknown
-    }
-    var typeUpper = type.toUpperCase();
-    return typeUpper.equals(RQ_INTEGER)
-      || typeUpper.equals(RQ_NUMERIC)
-      || typeUpper.equals(RQ_TINYINT)
-      || typeUpper.equals(RQ_SMALLINT)
-      || typeUpper.equals(RQ_BIGINT)
-      || typeUpper.equals(RQ_FLOAT)
-      || typeUpper.equals(RQ_DOUBLE);
+    return getJdbcTypeSigned(type);
   }
 
   @Override public int getColumnDisplaySize(int column) throws SQLException {

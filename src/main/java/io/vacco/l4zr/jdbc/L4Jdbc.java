@@ -506,6 +506,20 @@ public class L4Jdbc {
     }
   }
 
+  public static boolean getJdbcTypeSigned(String rqType) {
+    if (rqType == null || RQ_NULL.equalsIgnoreCase(rqType)) {
+      return false; // NULL or unknown
+    }
+    var typeUpper = rqType.toUpperCase();
+    return typeUpper.equals(RQ_INTEGER)
+      || typeUpper.equals(RQ_NUMERIC)
+      || typeUpper.equals(RQ_TINYINT)
+      || typeUpper.equals(RQ_SMALLINT)
+      || typeUpper.equals(RQ_BIGINT)
+      || typeUpper.equals(RQ_FLOAT)
+      || typeUpper.equals(RQ_DOUBLE);
+  }
+
   public static int getJdbcTypePrecision(String rqliteType) {
     if (rqliteType == null || RQ_NULL.equalsIgnoreCase(rqliteType)) {
       return 0; // NULL or unknown
@@ -555,6 +569,53 @@ public class L4Jdbc {
       case RQ_BLOB:      return byte[].class;
       default:           return Object.class;
     }
+  }
+
+  public static String rqTypeOf(Class<?> clazz) {
+    if (clazz == null) {
+      return RQ_NULL;
+    }
+    if (clazz == Integer.class) {
+      return RQ_INTEGER;
+    } else if (clazz == java.math.BigDecimal.class) {
+      return RQ_NUMERIC;
+    } else if (clazz == Boolean.class) {
+      return RQ_BOOLEAN;
+    } else if (clazz == Byte.class) {
+      return RQ_TINYINT;
+    } else if (clazz == Short.class) {
+      return RQ_SMALLINT;
+    } else if (clazz == Long.class) {
+      return RQ_BIGINT;
+    } else if (clazz == Float.class) {
+      return RQ_FLOAT;
+    } else if (clazz == Double.class) {
+      return RQ_DOUBLE;
+    } else if (clazz == String.class) {
+      return RQ_VARCHAR; // Prefer VARCHAR over NVARCHAR for String
+    } else if (clazz == java.sql.Date.class) {
+      return RQ_DATE;
+    } else if (clazz == java.sql.Time.class) {
+      return RQ_TIME;
+    } else if (clazz == java.sql.Timestamp.class) {
+      return RQ_TIMESTAMP;
+    } else if (clazz == java.net.URL.class) {
+      return RQ_DATALINK;
+    } else if (clazz == java.sql.Clob.class) {
+      return RQ_CLOB;
+    } else if (clazz == java.sql.NClob.class) {
+      return RQ_NCLOB;
+    } else if (clazz == byte[].class) {
+      return RQ_BLOB;
+    }
+    return RQ_NULL;
+  }
+
+  public static String rqTypeOf(Object o) {
+    if (o == null) {
+      return RQ_NULL;
+    }
+    return rqTypeOf(o.getClass());
   }
 
   public static String getJdbcTypeClassName(String type) {

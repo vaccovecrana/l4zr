@@ -57,7 +57,7 @@ public class L4RsTest {
       it("Validates L4Rs against a live rqlite instance", () -> {
         var stmt = new L4Ps(rq, "SELECT 1");
 
-        var dr = rq.executeSingle("DROP TABLE rs_test_data");
+        var dr = rq.executeSingle("DROP TABLE IF EXISTS rs_test_data");
         assertEquals(200, dr.statusCode);
 
         // Create table with diverse data types

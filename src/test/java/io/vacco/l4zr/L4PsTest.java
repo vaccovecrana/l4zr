@@ -182,14 +182,7 @@ public class L4PsTest {
         assertEquals(Types.NUMERIC, meta.getColumnType(2)); // num_val
         assertEquals(Types.BOOLEAN, meta.getColumnType(3)); // bool_val
         assertEquals("id", meta.getColumnName(1));
-
-        // Test getParameterMetaData (unsupported)
-        try {
-          ps.getParameterMetaData();
-          fail("Expected SQLException for getParameterMetaData");
-        } catch (SQLException e) {
-          assertEquals(SqlStateFeatureNotSupported, e.getSQLState());
-        }
+        assertNotNull(ps.getParameterMetaData());
 
         ps.close();
       });

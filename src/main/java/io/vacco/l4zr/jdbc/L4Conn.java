@@ -93,6 +93,7 @@ public class L4Conn implements Connection {
     if (isClosed) {
       return;
     }
+    L4Log.l4Trace("Closing connection {}", this);
     isClosed = true;
     this.client.close();
   }

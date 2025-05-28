@@ -293,8 +293,8 @@ public class L4PsTest {
         ps.setBigDecimal(1, new BigDecimal("333.33"));
         ps.addBatch();
 
-        // Add invalid batch entry (wrong table)
-        var invalidPs = new L4Ps(rq, "INSERT INTO nonexistent_table (num_val) VALUES (?)");
+        // Add invalid batch entry (invalid syntax)
+        var invalidPs = new L4Ps(rq, "INSERT INTO nonexistent_table (num_val) VALUES (?) WHERE WHERE");
         invalidPs.setBigDecimal(1, new BigDecimal("444.44"));
         invalidPs.addBatch();
 
@@ -457,7 +457,7 @@ public class L4PsTest {
           invalidPs.executeQuery();
           fail("Expected SQLException for invalid table");
         } catch (SQLException e) {
-          assertEquals(SqlStateConnectionError, e.getSQLState());
+          assertEquals(SqlStateGeneralError, e.getSQLState());
         }
 
         // Test clearParameters

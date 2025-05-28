@@ -85,20 +85,20 @@ Customize the driver’s behavior via JDBC URL parameters, see [L4Options](./src
 
 These options come from `rqlite`'s [Developer Guide](https://rqlite.io/docs/api)
 
-| Property Key                | Field Name                 | Type      | Default Value            | Description                                                                 |
-|-----------------------------|----------------------------|-----------|--------------------------|-----------------------------------------------------------------------------|
-| `baseUrl`                   | `baseUrl`                  | `String`  | `null`                   | The base URL of the RQLite server (e.g., `http://localhost:4001`).           |
-| `user`                      | `user`                     | `String`  | `null`                   | Username for RQLite server authentication.                                   |
-| `password`                  | `password`                 | `String`  | `null`                   | Password for RQLite server authentication.                                   |
-| `cacert`                    | `cacert`                   | `String`  | `null`                   | Path to the CA certificate for SSL/TLS connections.                         |
-| `insecure`                  | `insecure`                 | `boolean` | `false`                  | If `true`, disables SSL/TLS verification (not recommended for production).   |
-| `timeoutSec`                | `timeoutSec`               | `long`    | `5`                      | Timeout for HTTP requests in seconds.                                       |
-| `queue`                     | `queue`                    | `boolean` | `false`                  | If `true`, enables queuing of requests on the RQLite server.                |
-| `wait`                      | `wait`                     | `boolean` | `true`                   | If `true`, waits for the request to be processed by the RQLite leader.      |
-| `level`                     | `level`                    | `L4Level` | `L4Level.linearizable`   | Consistency level for queries (`none`, `weak`, `strong`, `linearizable`).   |
-| `linearizableTimeoutSec`    | `linearizableTimeoutSec`   | `long`    | `5`                      | Timeout for linearizable consistency queries in seconds.                    |
-| `freshnessSec`              | `freshnessSec`             | `long`    | `5`                      | Maximum age of data for freshness-based queries in seconds.                 |
-| `freshnessStrict`           | `freshnessStrict`          | `boolean` | `false`                  | If `true`, enforces strict freshness for queries.                           |
+| Property Key                | Type      | Default Value            | Description                                                                 |
+|-----------------------------|-----------|--------------------------|-----------------------------------------------------------------------------|
+| `baseUrl`                   | `String`  | `null`                   | The base URL of the RQLite server (e.g., `http://localhost:4001`).           |
+| `user`                      | `String`  | `null`                   | Username for RQLite server authentication.                                   |
+| `password`                  | `String`  | `null`                   | Password for RQLite server authentication.                                   |
+| `cacert`                    | `String`  | `null`                   | Path to the CA certificate for SSL/TLS connections.                         |
+| `insecure`                  | `boolean` | `false`                  | If `true`, disables SSL/TLS verification (not recommended for production).   |
+| `timeoutSec`                | `long`    | `5`                      | Timeout for HTTP requests in seconds.                                       |
+| `queue`                     | `boolean` | `false`                  | If `true`, enables queuing of requests on the RQLite server.                |
+| `wait`                      | `boolean` | `true`                   | If `true`, waits for the request to be processed by the RQLite leader.      |
+| `level`                     | `L4Level` | `L4Level.linearizable`   | Consistency level for queries (`none`, `weak`, `strong`, `linearizable`).   |
+| `linearizableTimeoutSec`    | `long`    | `5`                      | Timeout for linearizable consistency queries in seconds.                    |
+| `freshnessSec`              | `long`    | `5`                      | Maximum age of data for freshness-based queries in seconds.                 |
+| `freshnessStrict`           | `boolean` | `false`                  | If `true`, enforces strict freshness for queries.                           |
 
 Example JDBC URL:
 

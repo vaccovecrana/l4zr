@@ -1,5 +1,6 @@
 package io.vacco.l4zr;
 
+import com.zaxxer.hikari.*;
 import io.vacco.l4zr.dao.*;
 import io.vacco.l4zr.jdbc.*;
 import io.vacco.l4zr.rqlite.L4Client;
@@ -48,8 +49,10 @@ public class L4DriverTest {
       it("Applies Liquibase changesets",  () -> {
         var log = LoggerFactory.getLogger(L4DriverTest.class);
         L4Log.traceFn = log::trace;
-        try (var conn = DriverManager.getConnection(rqUrl)) {
-          try (var jdbcConn = new JdbcConnection(conn)) {
+        var hkConfig = new HikariConfig();
+        hkConfig.setJdbcUrl(rqUrl);
+        try (var hds = new HikariDataSource(hkConfig)) {
+          try (var jdbcConn = new JdbcConnection(hds.getConnection())) {
             var ra = new ClassLoaderResourceAccessor();
             var database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(jdbcConn);
             database.setDefaultCatalogName(L4Db.Main);

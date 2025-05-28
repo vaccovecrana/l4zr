@@ -9,6 +9,8 @@ import static io.vacco.l4zr.rqlite.L4Json.*;
 
 public class L4Result {
 
+  public static final String NoSuchTable = "no such table";
+
   public List<String> columns;
   public List<String> types;
   public List<List<String>> values;
@@ -66,7 +68,19 @@ public class L4Result {
   }
 
   public boolean isError() {
-    return error != null;
+    if (error != null) {
+      /*
+       * TODO
+       *  We need more error metadata from rqlite. For example, this is a soft error,
+       *  where a database query produced no results because the table does not exist.
+       *  However, the error is not severe enough to close a connection (which HikariCP
+       *  will do if we throw a SQLException because of this error). So we need some sort
+       *  of indication from rqlite to see if we can continue making queries through a
+       *  connection.
+       */
+      return !error.contains(NoSuchTable);
+    }
+    return false;
   }
 
   public void print(PrintStream out) {

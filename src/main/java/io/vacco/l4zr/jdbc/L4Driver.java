@@ -131,10 +131,6 @@ public class L4Driver implements Driver {
     props[2].description = "Timeout in seconds";
     props[2].required = false;
 
-    props[3] = new DriverPropertyInfo(kTransaction, mergedProps.getProperty(kTransaction, String.valueOf(L4Options.transaction)));
-    props[3].description = "Enable transaction mode";
-    props[3].required = false;
-
     props[4] = new DriverPropertyInfo(kQueue, mergedProps.getProperty(kQueue, String.valueOf(L4Options.queue)));
     props[4].description = "Enable queue mode";
     props[4].required = false;

@@ -85,9 +85,9 @@ public class L4Client implements Closeable {
     return this;
   }
 
-  public L4Response execute(L4Statement ... statements) {
+  public L4Response execute(boolean transaction, L4Statement ... statements) {
     var body = L4Statement.toArray(statements).toString();
-    var queryParams = L4Options.queryParams();
+    var queryParams = L4Options.queryParams(transaction);
     var resp = doJSONPostRequest(executeURL + queryParams, body);
     var rb = resp.body();
     var node = Json.parse(rb).asObject();
@@ -95,14 +95,14 @@ public class L4Client implements Closeable {
   }
 
   public L4Response executeSingle(String statement, Object... args) {
-    var res = execute(new L4Statement().sql(statement).withPositionalParams(args));
+    var res = execute(true, new L4Statement().sql(statement).withPositionalParams(args));
     checkResult(res.first());
     return res;
   }
 
   public L4Response query(L4Statement ... statements) {
     var body = L4Statement.toArray(statements).toString();
-    var queryParams = L4Options.queryParams();
+    var queryParams = L4Options.queryParams(false);
     var resp = doJSONPostRequest(queryURL + queryParams, body);
     var rb = resp.body();
     var node = Json.parse(rb).asObject();

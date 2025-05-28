@@ -42,6 +42,7 @@ public class L4ClientTest {
           var vals = rl.get(0).values;
           if (vals == null || vals.isEmpty()) {
             var res2 = rq.execute(
+              true,
               new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Alice', 'alice@example.com', 30)"),
               new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Bob', 'bob@example.com', 25)"),
               new L4Statement().sql("INSERT INTO users (name, email, age) VALUES ('Charlie', 'charlie@example.com', 35)")

@@ -81,33 +81,54 @@ See [L4PsTest](./src/test/java/io/vacco/l4zr/L4PsTest.java) for advanced example
 
 ## Configuration Options
 
-Customize the driver’s behavior via JDBC URL parameters. Below are the available options, their defaults, and their purposes.
+Customize the driver’s behavior via JDBC URL parameters, see [L4Options](./src/main/java/io/vacco/l4zr/rqlite/L4Options.java). Below are the available options, their defaults, and their purposes.
 
 These options come from `rqlite`'s [Developer Guide](https://rqlite.io/docs/api)
 
-| Option                | Description                                                                 | Default           | Example URL Parameter                     |
-|-----------------------|-----------------------------------------------------------------------------|-------------------|-------------------------------------------|
-| `timeout`             | Timeout for `/db/execute` and `/db/query` requests (e.g., `5s`, `500ms`).   | `5s`              | `?timeout=5s`                             |
-| `queue`               | Queues write requests if the contacted node isn’t the leader.               | `true`            | `?queue=false`                            |
-| `wait`                | Waits for write requests to be applied to the Raft log.                     | `true`            | `?wait=false`                             |
-| `level`               | Read consistency level: `none`, `weak`, `strong`, `linearizable`.           | `linearizable`    | `?level=linearizable`                     |
-| `linearizable_timeout`| Timeout for linearizable reads (when `level=linearizable`).                 | Same as `timeout` | `?linearizable_timeout=5s`                |
-| `freshness`           | Maximum data age for `weak` or `none` reads (e.g., `1s`, `500ms`).          | None              | `?level=weak&freshness=1s`                |
-| `freshness_strict`    | Enforces strict freshness for `weak` or `none` reads (fails if not fresh).  | `false`           | `?level=weak&freshness=1s&freshness_strict=true` |
+| Property Key                | Field Name                 | Type      | Default Value            | Description                                                                 |
+|-----------------------------|----------------------------|-----------|--------------------------|-----------------------------------------------------------------------------|
+| `baseUrl`                   | `baseUrl`                  | `String`  | `null`                   | The base URL of the RQLite server (e.g., `http://localhost:4001`).           |
+| `user`                      | `user`                     | `String`  | `null`                   | Username for RQLite server authentication.                                   |
+| `password`                  | `password`                 | `String`  | `null`                   | Password for RQLite server authentication.                                   |
+| `cacert`                    | `cacert`                   | `String`  | `null`                   | Path to the CA certificate for SSL/TLS connections.                         |
+| `insecure`                  | `insecure`                 | `boolean` | `false`                  | If `true`, disables SSL/TLS verification (not recommended for production).   |
+| `timeoutSec`                | `timeoutSec`               | `long`    | `5`                      | Timeout for HTTP requests in seconds.                                       |
+| `queue`                     | `queue`                    | `boolean` | `false`                  | If `true`, enables queuing of requests on the RQLite server.                |
+| `wait`                      | `wait`                     | `boolean` | `true`                   | If `true`, waits for the request to be processed by the RQLite leader.      |
+| `level`                     | `level`                    | `L4Level` | `L4Level.linearizable`   | Consistency level for queries (`none`, `weak`, `strong`, `linearizable`).   |
+| `linearizableTimeoutSec`    | `linearizableTimeoutSec`   | `long`    | `5`                      | Timeout for linearizable consistency queries in seconds.                    |
+| `freshnessSec`              | `freshnessSec`             | `long`    | `5`                      | Maximum age of data for freshness-based queries in seconds.                 |
+| `freshnessStrict`           | `freshnessStrict`          | `boolean` | `false`                  | If `true`, enforces strict freshness for queries.                           |
 
 Example JDBC URL:
 
 ```java
-String url = "jdbc:sqlite:http://localhost:4001/mydb?timeout=5s&level=strong&freshness=1s";
+String url = "jdbc:sqlite:http://localhost:4001?timeoutSec=5&level=strong&freshnessSec=1";
 ```
 
 ## Caveats
 
-- Memory Usage: Result sets are held in memory (mapped from rqlite’s JSON responses to JDBC ResultSet). Write queries that return small datasets to avoid memory issues.
-- Catalog Support: Only the `main` SQLite database is reported as a catalog to JDBC.
-- Transaction Limitations: The driver does nothing when calling `setAutoCommit`, `commit`, or `rollback` due to `rqlite`'s [Transaction support](https://rqlite.io/docs/api/api/#transactions). Use batch operations for atomic multi-statement execution.
-- Isolation Level: Only `TRANSACTION_SERIALIZABLE` is supported, with `linearizable` read consistency by default. Setting `level=weak` or `level=none` may introduce read inconsistencies.
-- Type Mapping: User-defined SQL types (UDTs) are not supported. getTypeMap and setTypeMap are implemented for compliance but have no effect.
+### Memory Usage
+
+Result sets are held in memory (mapped from rqlite’s JSON responses to JDBC ResultSet). Write queries that return small datasets to avoid memory issues.
+
+### Catalog Support
+
+Only the `main` SQLite database is reported as a catalog to JDBC.
+
+### Transaction Limitations
+
+The driver does nothing when calling `commit`, or `rollback` on `Connection` instances due to `rqlite`'s [Transaction support](https://rqlite.io/docs/api/api/#transactions).
+
+Call `setAutoCommit(true)` on a connection, and call `executeBatch` on `Statement` instances for atomic multi-statement execution, which effectively appends `transaction=true` to the underlying `rqlite` HTTP request.
+
+### Isolation Level
+
+Only `TRANSACTION_SERIALIZABLE` is supported, with `linearizable` read consistency by default. Setting `level=weak` or `level=none` may introduce read inconsistencies.
+
+### Type Mapping
+
+User-defined SQL types (UDTs) are not supported. `getTypeMap` and `setTypeMap` are implemented for compliance but have no effect.
 
 ## Contributing
 

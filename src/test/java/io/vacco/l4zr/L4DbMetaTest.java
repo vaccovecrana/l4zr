@@ -99,6 +99,7 @@ public class L4DbMetaTest {
     );
     var blobData = Base64.getEncoder().encodeToString("Hello, rqlite!".getBytes());
     res = rq.execute(
+      true,
       new L4Statement().sql(insertSql).withPositionalParams(
         123.45, 1, 127, 32767, 2147483647, 9223372036854775807L, 3.14f, 2.71828,
         "Hello, world!", "2023-10-15", "14:30:00", "2023-10-15 14:30:00",
@@ -110,6 +111,7 @@ public class L4DbMetaTest {
 
     var insertRelatedSql = "INSERT INTO related_table (test_id, data) VALUES (?, ?)";
     res = rq.execute(
+      true,
       new L4Statement().sql(insertRelatedSql).withPositionalParams(1, "Related data")
     );
     assertEquals(200, res.statusCode);

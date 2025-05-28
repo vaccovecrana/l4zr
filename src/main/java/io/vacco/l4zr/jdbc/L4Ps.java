@@ -21,12 +21,16 @@ public class L4Ps extends L4St implements PreparedStatement {
   private L4Statement statement;
   private boolean resultSetAvailable = false;
 
-  public L4Ps(L4Client client, String sql) throws SQLException {
-    super(client);
+  public L4Ps(L4Client client, L4Conn conn, String sql) throws SQLException {
+    super(client, conn);
     if (sql == null || sql.trim().isEmpty()) {
       throw badStatement();
     }
     this.statement = new L4Statement().sql(sql);
+  }
+
+  public L4Ps(L4Client client, String sql) throws SQLException {
+    this(client, null, sql);
   }
 
   protected void checkClosed() throws SQLException {
@@ -41,7 +45,7 @@ public class L4Ps extends L4St implements PreparedStatement {
     currentResultIndex = -1;
     try {
       var isSelect = isSelect(statement.sql);
-      currentResponse = isSelect ? client.query(statement) : client.execute(statement);
+      currentResponse = isSelect ? client.query(statement) : client.execute(isAutoCommit(), statement);
       var result = checkResult(currentResponse.first());
       currentResultIndex = 0;
       resultSetAvailable = isSelect && result.columns != null && !result.columns.isEmpty();
@@ -96,12 +100,12 @@ public class L4Ps extends L4St implements PreparedStatement {
       return new int[0];
     }
     try {
-      currentResponse = client.execute(batch.toArray(new L4Statement[0]));
+      currentResponse = client.execute(isAutoCommit(), batch.toArray(new L4Statement[0]));
       batch.clear();
       var updateCounts = new int[currentResponse.results.size()];
       for (int i = 0; i < currentResponse.results.size(); i++) {
         var result = currentResponse.results.get(i);
-        if (result.isError()) {
+        if (result.error != null) {
           throw new BatchUpdateException(result.error, SqlStateConnectionError, 0, updateCounts, null);
         }
         updateCounts[i] = result.rowsAffected != null ? result.rowsAffected : 0;

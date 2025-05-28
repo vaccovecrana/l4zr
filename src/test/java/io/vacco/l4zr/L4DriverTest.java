@@ -22,6 +22,8 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.io.*;
 import java.sql.DriverManager;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static j8spec.J8Spec.*;
 
@@ -82,6 +84,18 @@ public class L4DriverTest {
         user.email = "joe@me.com";
         user.nickName = "Joe";
         user = userDao.upsert(user);
+
+        user = new User();
+        user.email = "jane@me.com";
+        user.nickName = "Jane";
+        user = userDao.upsert(user);
+
+        var res = userDao.sql().query()
+          .batch("update User set nickName = ? where email = ?")
+          .params(Stream.of(
+            List.of("JoeLol", "joe@me.com"),
+            List.of("JaneLol", "jane@me.com")
+          )).run();
 
         var device = new Device();
         device.number = 4567345;

@@ -3,6 +3,7 @@ package io.vacco.l4zr.jdbc;
 import io.vacco.l4zr.rqlite.L4Result;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLWarning;
 
 import static java.lang.String.format;
 
@@ -232,6 +233,10 @@ public class L4Err {
 
   public static SQLException stClosed(boolean prepared) {
     return new SQLException(format("%s is closed", prepared ? "Prepared statement" : "Statement"), SqlStateGeneralError);
+  }
+
+  public static SQLWarning warnQuery(String msg) {
+    return new SQLWarning(msg, SqlStateInvalidQuery);
   }
 
   public static void checkColumn(int idx, L4Result result) throws SQLException {

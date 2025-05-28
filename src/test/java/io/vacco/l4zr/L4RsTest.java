@@ -106,6 +106,7 @@ public class L4RsTest {
         );
         var blobData = Base64.getEncoder().encodeToString("Hello, rqlite!".getBytes(StandardCharsets.UTF_8));
         var res2 = rq.execute(
+          true,
           new L4Statement().sql(insertSql).withPositionalParams(
             123.45, // num_val
             1, // bool_val (BOOLEAN: true)

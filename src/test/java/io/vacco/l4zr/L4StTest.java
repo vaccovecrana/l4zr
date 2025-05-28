@@ -41,6 +41,7 @@ public class L4StTest {
     var insertSql = "INSERT INTO st_test_data (num_val, bool_val, text_val, blob_val) VALUES (?, ?, ?, ?)";
     var blobData = Base64.getEncoder().encodeToString("Test blob".getBytes());
     var res2 = rq.execute(
+      true,
       new L4Statement().sql(insertSql).withPositionalParams(
         123.45, 1, "Hello, world!", blobData
       ),
@@ -56,6 +57,8 @@ public class L4StTest {
       it("Tests L4St query execution and result navigation", () -> {
         setupTestTable(rq);
         var stmt = new L4St(rq);
+
+        assertNull(stmt.getWarnings());
 
         // Test executeQuery with single result
         var rs = stmt.executeQuery("SELECT * FROM st_test_data WHERE id = 1");
@@ -89,16 +92,12 @@ public class L4StTest {
         rs = stmt.executeQuery("SELECT * FROM st_test_data WHERE id = 999");
         assertNotNull(rs);
         assertFalse(rs.next());
+        assertNull(stmt.getWarnings());
         rs.close();
 
         // Test executeQuery with invalid SQL
-        try {
-          stmt.executeQuery("SELECT * FROM nonexistent_table");
-          fail("Expected SQLException for invalid table");
-        } catch (SQLException e) {
-          assertEquals(SqlStateConnectionError, e.getSQLState());
-        }
-
+        rs = stmt.executeQuery("SELECT * FROM nonexistent_table");
+        assertNotNull(rs.getWarnings());
         stmt.close();
       });
 
@@ -119,13 +118,8 @@ public class L4StTest {
         assertEquals(0, rowsAffected);
 
         // Test executeUpdate with invalid SQL
-        try {
-          stmt.executeUpdate("UPDATE nonexistent_table SET num_val = 1");
-          fail("Expected SQLException for invalid table");
-        } catch (SQLException e) {
-          assertEquals(SqlStateConnectionError, e.getSQLState());
-        }
-
+        stmt.executeUpdate("UPDATE nonexistent_table SET num_val = 1");
+        assertNotNull(stmt.getWarnings());
         stmt.close();
       });
 

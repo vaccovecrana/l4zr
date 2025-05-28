@@ -8,7 +8,7 @@ public class L4Options {
 
   public static final String
     kCaCert = "cacert", kInsecure = "insecure",
-    kBaseUrl = "baseUrl", kTimeoutSec = "timeoutSec", kTransaction = "transaction",
+    kBaseUrl = "baseUrl", kTimeoutSec = "timeoutSec",
     kQueue = "queue", kWait = "wait", kLevel = "level", kLinearizableTimeoutSec = "linearizableTimeoutSec",
     kFreshnessSec = "freshnessSec", kFreshnessStrict = "freshnessStrict",
     kUser = "user", kPassword = "password";
@@ -16,7 +16,6 @@ public class L4Options {
   public static String  baseUrl, user, password, cacert;
 
   public static boolean insecure;
-  public static boolean transaction = true;
   public static boolean queue = false;
   public static boolean wait = true;
 
@@ -31,7 +30,7 @@ public class L4Options {
     return String.format("%s=%s", key, value.toString());
   }
 
-  public static String queryParams() {
+  public static String queryParams(boolean transaction) {
     var pairs = new String[] {
       transaction ? kv("transaction", true) : "",
       kv("timings", true),
@@ -60,9 +59,6 @@ public class L4Options {
       }
       if (p.containsKey(kTimeoutSec)) {
         L4Options.timeoutSec = Long.parseLong(get(p, kTimeoutSec));
-      }
-      if (p.containsKey(kTransaction)) {
-        L4Options.transaction = Boolean.parseBoolean(get(p, kTransaction));
       }
       if (p.containsKey(kQueue)) {
         L4Options.queue = Boolean.parseBoolean(get(p, kQueue));

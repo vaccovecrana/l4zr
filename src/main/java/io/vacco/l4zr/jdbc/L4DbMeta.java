@@ -11,21 +11,17 @@ import static io.vacco.l4zr.jdbc.L4Jdbc.*;
 
 public class L4DbMeta implements DatabaseMetaData {
 
-  private final L4Client client;
-  private final Connection connection; // Optional, can be null if not provided
-  private String sqliteVersion;
+  private final L4Client  client;
+  private final L4Conn    conn;
+  private String          sqliteVersion;
 
-  public L4DbMeta(L4Client client, Connection connection) {
+  public L4DbMeta(L4Client client, L4Conn conn) {
     this.client = Objects.requireNonNull(client);
-    this.connection = connection;
-  }
-
-  public L4DbMeta(L4Client client) {
-    this(client, null);
+    this.conn = conn;
   }
 
   private ResultSet executeQuery(String sql) throws SQLException {
-    return new L4St(client).executeQuery(sql);
+    return new L4St(client, conn).executeQuery(sql);
   }
 
   // General Database Properties
@@ -676,10 +672,10 @@ public class L4DbMeta implements DatabaseMetaData {
   }
 
   @Override public Connection getConnection() throws SQLException {
-    if (connection == null) {
+    if (conn == null) {
       throw badQuery("No connection available");
     }
-    return connection;
+    return conn;
   }
 
   // Advanced Features

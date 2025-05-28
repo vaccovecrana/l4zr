@@ -10,6 +10,7 @@ import static io.vacco.l4zr.rqlite.L4Err.*;
 
 public class L4St implements Statement {
 
+  protected final L4Conn            conn;
   protected final L4Client          client;
   protected final List<L4Statement> batch = new ArrayList<>();
 
@@ -21,8 +22,17 @@ public class L4St implements Statement {
   protected boolean                 closeOnCompletion = false;
   protected int                     currentResultIndex = -1;
 
-  public L4St(L4Client client) {
+  public L4St(L4Client client, L4Conn conn) {
     this.client = Objects.requireNonNull(client);
+    this.conn = conn;
+  }
+
+  public L4St(L4Client client) {
+    this(client, null);
+  }
+
+  protected boolean isAutoCommit() {
+    return conn != null && conn.autoCommit;
   }
 
   protected void checkClosed() throws SQLException {
@@ -41,7 +51,7 @@ public class L4St implements Statement {
   private L4Response runRaw(String sql) {
     var sel = isSelect(sql);
     var sta = split(sql);
-    var res = sel ? client.query(sta) : client.execute(sta);
+    var res = sel ? client.query(sta) : client.execute(isAutoCommit(), sta);
     for (var result : res.results) {
       checkResult(result);
     }
@@ -73,7 +83,7 @@ public class L4St implements Statement {
       throw badStatement();
     }
     try {
-      currentResponse = client.execute(new L4Statement().sql(sql));
+      currentResponse = client.execute(isAutoCommit(), new L4Statement().sql(sql));
       var result = checkResult(currentResponse.first());
       return result.rowsAffected != null ? result.rowsAffected : 0;
     } catch (Exception e) {
@@ -140,11 +150,30 @@ public class L4St implements Statement {
 
   @Override public SQLWarning getWarnings() throws SQLException {
     checkClosed();
+    if (currentResponse != null) {
+      var root = (SQLWarning) null;
+      for (var res : currentResponse.results) {
+        if (res.error != null) {
+          var warn = warnQuery(res.error);
+          if (root == null) {
+            root = warn;
+          } else {
+            root.setNextWarning(warn);
+          }
+        }
+      }
+      return root;
+    }
     return null;
   }
 
   @Override public void clearWarnings() throws SQLException {
     checkClosed();
+    if (currentResponse != null) {
+      for (var res : currentResponse.results) {
+        res.error = null;
+      }
+    }
   }
 
   @Override public void setCursorName(String name) throws SQLException {
@@ -250,11 +279,11 @@ public class L4St implements Statement {
       return new int[0];
     }
     try {
-      currentResponse = client.execute(batch.toArray(new L4Statement[0]));
+      currentResponse = client.execute(isAutoCommit(), batch.toArray(new L4Statement[0]));
       var updateCounts = new int[currentResponse.results.size()];
       for (int i = 0; i < currentResponse.results.size(); i++) {
         var result = currentResponse.results.get(i);
-        if (result.isError()) {
+        if (result.error != null) {
           throw new BatchUpdateException(result.error, SqlStateGeneralError, updateCounts, null);
         }
         updateCounts[i] = result.rowsAffected;
@@ -266,7 +295,7 @@ public class L4St implements Statement {
     }
   }
 
-  @Override public Connection getConnection() throws SQLException {
+  @Override public Connection getConnection() {
     return null;
   }
 
@@ -279,7 +308,7 @@ public class L4St implements Statement {
     if (currentResultIndex + 1 < currentResponse.results.size()) {
       currentResultIndex++;
       var result = currentResponse.results.get(currentResultIndex);
-      if (result.isError()) {
+      if (result.error != null) {
         throw generalError(result.error);
       }
       if (result.columns != null && !result.columns.isEmpty()) {

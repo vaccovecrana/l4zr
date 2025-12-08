@@ -12,6 +12,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      GPR_USER: ${{ github.actor }}
+      GPR_KEY: ${{ secrets.GITHUB_TOKEN }}
+      GPR_REPO: https://maven.pkg.github.com/${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Java
@@ -32,8 +36,5 @@ jobs:
           }
           EOF
       - name: Publish to GitHub Packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MAVEN_SIGNING_PRV: ${{ secrets.MAVEN_SIGNING_PRV }}
-        run: ./gradlew --no-daemon clean publish
+        run: ./gradlew --no-daemon clean publish -I publish.gradle.kts
 

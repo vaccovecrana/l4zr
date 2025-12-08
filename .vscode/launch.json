@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Build Jar (Gradle)",
+            "type": "java",
+            "request": "launch",
+            "mainClass": "io.vacco.l4zr.BuildLauncher",
+            "projectName": "l4zr",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "gradle:build",
+            "console": "integratedTerminal",
+            "noDebug": true
+        }
+    ]
+}

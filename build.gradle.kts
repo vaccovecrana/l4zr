@@ -1,19 +1,7 @@
-plugins {
-  id("io.vacco.oss.gitflow") version "1.0.1"
-  id("maven-publish")
-}
+plugins { id("io.vacco.oss.gitflow") version "1.0.1" }
 
 group = "io.vacco.l4zr"
 version = "8.38.0"
-
-// GitHub Packages credentials (optional for local builds)
-val ghUser = providers.gradleProperty("gpr.user").orElse("").get()
-val ghToken = providers.gradleProperty("gpr.key").orElse("").get()
-val ghRepo = providers.gradleProperty("gpr.repo").orElse("").get()
-
-require(ghUser.isNotBlank()) { "Missing gpr.user" }
-require(ghToken.isNotBlank()) { "Missing gpr.key" }
-require(ghRepo.isNotBlank()) { "Missing gpr.repo" }
 
 configure<io.vacco.oss.gitflow.GsPluginProfileExtension> {
   addJ8Spec()
@@ -31,18 +19,5 @@ dependencies {
 tasks.processResources {
   filesMatching("io/vacco/l4zr/version") {
     expand("projectVersion" to version)
-  }
-}
-
-publishing {
-  repositories {
-    maven {
-      name = "GitHubPackages"
-      url = uri(ghRepo)
-      credentials {
-        username = ghUser
-        password = ghToken
-      }
-    }
   }
 }

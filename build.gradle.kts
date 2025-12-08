@@ -1,7 +1,18 @@
-plugins { id("io.vacco.oss.gitflow") version "1.0.1" }
+plugins {
+  id("io.vacco.oss.gitflow") version "1.0.1"
+  id("maven-publish")
+}
 
 group = "io.vacco.l4zr"
 version = "8.38.0"
+
+// GitHub Packages credentials (optional for local builds)
+val ghUser = providers.gradleProperty("gpr.user")
+  .orElse(System.getenv("GITHUB_ACTOR") ?: "")
+  .get()
+val ghToken = providers.gradleProperty("gpr.key")
+  .orElse(System.getenv("GITHUB_TOKEN") ?: "")
+  .get()
 
 configure<io.vacco.oss.gitflow.GsPluginProfileExtension> {
   addJ8Spec()
@@ -23,14 +34,28 @@ tasks.processResources {
 }
 
 publishing {
-  repositories {
-    maven {
-      name = "GitHubPackages"
-      url = uri("https://maven.pkg.github.com/felixfong227/l4zr")
-      credentials {
-        username = providers.gradleProperty("gpr.user").orElse(System.getenv("GITHUB_ACTOR")).get()
-        password = providers.gradleProperty("gpr.key").orElse(System.getenv("GITHUB_TOKEN")).get()
+  if (ghUser.isNotBlank() && ghToken.isNotBlank()) {
+    repositories {
+      maven {
+        name = "GitHubPackages"
+        url = uri("https://maven.pkg.github.com/felixfong227/l4zr")
+        credentials {
+          username = ghUser
+          password = ghToken
+        }
       }
+    }
+  }
+}
+
+// Skip publish tasks when credentials are not provided (local builds)
+tasks.withType<PublishToMavenRepository>().configureEach {
+  onlyIf {
+    if (ghUser.isBlank() || ghToken.isBlank()) {
+      logger.lifecycle("Skipping ${name} – GitHub Packages credentials not set.")
+      false
+    } else {
+      true
     }
   }
 }

@@ -21,3 +21,16 @@ tasks.processResources {
     expand("projectVersion" to version)
   }
 }
+
+publishing {
+  repositories {
+    maven {
+      name = "GitHubPackages"
+      url = uri("https://maven.pkg.github.com/felixfong227/l4zr")
+      credentials {
+        username = providers.gradleProperty("gpr.user").orElse(System.getenv("GITHUB_ACTOR")).get()
+        password = providers.gradleProperty("gpr.key").orElse(System.getenv("GITHUB_TOKEN")).get()
+      }
+    }
+  }
+}

@@ -137,6 +137,15 @@ public class L4JdbcTest {
     });
 
     it("Supports UUID and DATETIME helpers", () -> {
+    assertEquals(java.sql.Types.VARCHAR, getJdbcType("char(32)"));
+    assertEquals(32, getJdbcTypePrecision("char(32)"));
+    assertEquals(String.class, getJdbcTypeClass("char(32)"));
+    assertEquals(32, getJdbcTypeColumnDisplaySize("char(32)"));
+      assertEquals(Types.VARCHAR, getJdbcType("json"));
+      assertEquals(65535, getJdbcTypePrecision("json"));
+      assertEquals(String.class, getJdbcTypeClass("json"));
+      assertEquals(255, getJdbcTypeColumnDisplaySize("json"));
+
       assertEquals(String.class, getJdbcTypeClass(RQ_UUID));
       assertEquals(java.sql.Timestamp.class, getJdbcTypeClass(RQ_DATETIME));
       assertEquals(36, getJdbcTypePrecision(RQ_UUID));

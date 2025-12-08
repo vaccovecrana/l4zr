@@ -37,5 +37,5 @@ jobs:
           }
           EOF
       - name: Publish to GitHub Packages
-        run: ./gradlew --no-daemon clean publish -I publish.gradle.kts
+        run: ./gradlew --no-daemon clean publish -I publish.gradle.kts -x signVaccoPublication -x signGprPublication -x signMavenPublication
 

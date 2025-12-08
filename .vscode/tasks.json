@@ -19,6 +19,21 @@
             "problemMatcher": [
                 "$gradle"
             ]
+        },
+        {
+            "label": "gradle:build+export",
+            "type": "shell",
+            "command": "sh",
+            "args": [
+                "-c",
+                "gradle build && mkdir -p output && cp build/libs/*.jar output/"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gradle"
+            ]
         }
     ]
 }

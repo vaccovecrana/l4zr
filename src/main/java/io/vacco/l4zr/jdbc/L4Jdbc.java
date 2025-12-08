@@ -43,17 +43,19 @@ public class L4Jdbc {
   public static final String RQ_DATE      = "DATE";
   public static final String RQ_TIME      = "TIME";
   public static final String RQ_TIMESTAMP = "TIMESTAMP";
+  public static final String RQ_DATETIME  = "DATETIME";
   public static final String RQ_DATALINK  = "DATALINK";
   public static final String RQ_CLOB      = "CLOB";
   public static final String RQ_NCLOB     = "NCLOB";
   public static final String RQ_NVARCHAR  = "NVARCHAR";
   public static final String RQ_BLOB      = "BLOB";
+  public static final String RQ_UUID      = "UUID";
   public static final String RQ_NULL      = "NULL";
 
   public static final String[] RQ_TYPES = new String[] {
     RQ_INTEGER, RQ_NUMERIC, RQ_BOOLEAN, RQ_TINYINT,
     RQ_SMALLINT, RQ_BIGINT, RQ_FLOAT, RQ_DOUBLE,
-    RQ_VARCHAR, RQ_DATE, RQ_TIME, RQ_TIMESTAMP,
+    RQ_VARCHAR, RQ_UUID, RQ_DATE, RQ_TIME, RQ_TIMESTAMP, RQ_DATETIME,
     RQ_DATALINK, RQ_CLOB, RQ_NCLOB, RQ_NVARCHAR,
     RQ_BLOB, RQ_NULL
   };
@@ -393,6 +395,12 @@ public class L4Jdbc {
       result = castBoolean(value, columnIndex, sourceJdbcType);
     } else if (type == byte[].class) {
       result = castBlob(value, columnIndex, sourceJdbcType);
+    } else if (type == java.util.UUID.class) {
+      try {
+        result = java.util.UUID.fromString(value);
+      } catch (Exception e) {
+        throw badConversion(columnIndex, value, e);
+      }
     } else {
       throw badConversion(columnIndex, sourceJdbcType, type);
     }
@@ -468,6 +476,8 @@ public class L4Jdbc {
             return Base64.getEncoder().encodeToString((byte[]) x);
           }
           throw badParam("Invalid BLOB data");
+        case Types.OTHER:
+          return x.toString();
         default:
           throw notSupported(format("Unsupported SQL type: [%s]", targetSqlType));
       }
@@ -496,11 +506,13 @@ public class L4Jdbc {
       case RQ_DATE:       return DATE;
       case RQ_TIME:       return TIME;
       case RQ_TIMESTAMP:  return TIMESTAMP;
+      case RQ_DATETIME:   return TIMESTAMP;
       case RQ_DATALINK:   return DATALINK;
       case RQ_CLOB:       return CLOB;
       case RQ_NCLOB:      return NCLOB;
       case RQ_NVARCHAR:   return NVARCHAR;
       case RQ_BLOB:       return BLOB;
+      case RQ_UUID:       return VARCHAR;
       case RQ_NULL:       return NULL;
       default: return -1;
     }
@@ -543,6 +555,8 @@ public class L4Jdbc {
       case RQ_NCLOB:      return 65535;  // Large national text
       case RQ_NVARCHAR:   return 255;    // National text, conservative default
       case RQ_BLOB:       return 65535;  // Binary data, conservative default
+      case RQ_DATETIME:   return 29;     // "YYYY-MM-DD HH:MM:SS.SSS+ZZ"
+      case RQ_UUID:       return 36;     // "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       default:            return 0;      // Fallback for unknown types
     }
   }
@@ -563,10 +577,12 @@ public class L4Jdbc {
       case RQ_DATE:      return java.sql.Date.class;
       case RQ_TIME:      return java.sql.Time.class;
       case RQ_TIMESTAMP: return java.sql.Timestamp.class;
+      case RQ_DATETIME:  return java.sql.Timestamp.class;
       case RQ_DATALINK:  return java.net.URL.class;
       case RQ_CLOB:      return java.sql.Clob.class;
       case RQ_NCLOB:     return java.sql.NClob.class;
       case RQ_BLOB:      return byte[].class;
+      case RQ_UUID:      return String.class;
       default:           return Object.class;
     }
   }
@@ -607,6 +623,8 @@ public class L4Jdbc {
       return RQ_NCLOB;
     } else if (clazz == byte[].class) {
       return RQ_BLOB;
+    } else if (clazz == java.util.UUID.class) {
+      return RQ_UUID;
     }
     return RQ_NULL;
   }
@@ -642,6 +660,8 @@ public class L4Jdbc {
       case RQ_NCLOB:      return 255;  // Large national text
       case RQ_NVARCHAR:   return 255;  // National text, conservative default
       case RQ_BLOB:       return 255;  // Binary data, conservative default
+      case RQ_DATETIME:   return 29;   // "YYYY-MM-DD HH:MM:SS.SSS+ZZ"
+      case RQ_UUID:       return 36;   // "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       default:            return 4;    // Fallback for unknown types
     }
   }

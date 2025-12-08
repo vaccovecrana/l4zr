@@ -118,12 +118,14 @@ public class L4JdbcTest {
       assertEquals(Types.DATE, getJdbcType(RQ_DATE));
       assertEquals(Types.TIME, getJdbcType(RQ_TIME));
       assertEquals(Types.TIMESTAMP, getJdbcType(RQ_TIMESTAMP));
+      assertEquals(Types.TIMESTAMP, getJdbcType(RQ_DATETIME));
       assertEquals(Types.DATALINK, getJdbcType(RQ_DATALINK));
       assertEquals(Types.CLOB, getJdbcType(RQ_CLOB));
       assertEquals(Types.NCLOB, getJdbcType(RQ_NCLOB));
       assertEquals(Types.NVARCHAR, getJdbcType(RQ_NVARCHAR));
       assertEquals(Types.BLOB, getJdbcType(RQ_BLOB));
       assertEquals(Types.NULL, getJdbcType(RQ_NULL));
+      assertEquals(Types.VARCHAR, getJdbcType(RQ_UUID));
       assertEquals(-1, getJdbcType("UNKNOWN"));
       try {
         getJdbcType(null);
@@ -132,6 +134,17 @@ public class L4JdbcTest {
         assertNotNull(e.getMessage());
       }
       assertEquals(Types.INTEGER, getJdbcType("integer")); // Case-insensitive
+    });
+
+    it("Supports UUID and DATETIME helpers", () -> {
+      assertEquals(String.class, getJdbcTypeClass(RQ_UUID));
+      assertEquals(java.sql.Timestamp.class, getJdbcTypeClass(RQ_DATETIME));
+      assertEquals(36, getJdbcTypePrecision(RQ_UUID));
+      assertEquals(29, getJdbcTypeColumnDisplaySize(RQ_DATETIME));
+
+      var uuid = java.util.UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+      assertEquals(uuid, castObject(uuid.toString(), 1, Types.VARCHAR, java.util.UUID.class));
+      assertEquals(uuid.toString(), convertParameter(uuid, Types.OTHER));
     });
 
     it("Tests L4Jdbc primitive type conversions", () -> {

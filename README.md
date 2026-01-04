@@ -1,3 +1,5 @@
+> ARCHIVED: this code has moved over to https://github.com/rqlite/rqlite-jdbc
+
 # l4zr - rqlite JDBC Driver
 
 `l4zr` is a minimal (~130KB, zero dependencies),  Type 4 JDBC driver for [rqlite](https://github.com/rqlite/rqlite),
